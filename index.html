@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cozy Cat Café</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <header id="hud">
+      <h1>Cozy Cat Café</h1>
+      <div class="stats">
+        <span class="stat">🪙 <span id="coins">0</span></span>
+        <span class="stat">🐱 <span id="cat-count">0/3</span></span>
+      </div>
+      <button id="refill">Refill food (10 🪙)</button>
+    </header>
+
+    <div id="shop">
+      <div id="door" class="prop">🚪<span class="prop-label">Door</span></div>
+      <div id="bowl" class="prop">🥣<span class="prop-label">Food</span></div>
+      <!-- seats, cats, customers and effects are added by ui.js -->
+    </div>
+
+    <div id="info">
+      <span id="info-text"></span>
+      <button id="info-close" aria-label="Close">✕</button>
+    </div>
+    <div id="message"></div>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="cats.js"></script>
+  <script src="customers.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
