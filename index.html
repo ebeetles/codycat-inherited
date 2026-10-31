@@ -4,35 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cozy Cat Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main id="app">
-    <header id="hud">
-      <h1>Cozy Cat Café</h1>
-      <div class="stats">
-        <span class="stat">🪙 <span id="coins">0</span></span>
-        <span class="stat">🐱 <span id="cat-count">0/3</span></span>
+    <header id="hud" class="box wood">
+      <div class="brand">
+        <img class="icon" data-icon="catHead" alt="" />
+        <h1>Cozy Cat Café</h1>
       </div>
-      <button id="refill">Refill food (10 🪙)</button>
+      <div class="stats">
+        <span class="stat" id="stat-coins" title="Coins">
+          <img class="icon" data-icon="coin" alt="Coins" /><span id="coins">0</span>
+        </span>
+        <span class="stat" title="Cats in the café">
+          <img class="icon" data-icon="catHead" alt="Cats" /><span id="cat-count">0/3</span>
+        </span>
+      </div>
+      <button id="refill" class="btn btn-honey">
+        <img class="icon icon-wide" data-icon="bowlFull" alt="" />
+        <span>Refill food</span>
+        <span class="price"><img class="icon icon-sm" data-icon="coin" alt="" />10</span>
+      </button>
     </header>
 
-    <div id="shop">
-      <div id="door" class="prop">🚪<span class="prop-label">Door</span></div>
-      <div id="bowl" class="prop">🥣<span class="prop-label">Food</span></div>
-      <!-- seats, cats, customers and effects are added by ui.js -->
+    <div id="stage">
+      <canvas id="shop" aria-label="The café: cats wander, customers sit at the tables, and strays arrive at the door"></canvas>
+      <div id="message" role="status" aria-live="polite"></div>
     </div>
 
-    <div id="info">
-      <span id="info-text"></span>
-      <button id="info-close" aria-label="Close">✕</button>
-    </div>
-    <div id="message"></div>
+    <section id="tray">
+      <div class="slot">
+        <div id="stray-panel" class="box paper card">
+          <canvas id="stray-portrait" class="portrait" width="20" height="17"></canvas>
+          <div class="card-body">
+            <p id="stray-text" class="card-title"></p>
+            <p id="stray-meta" class="card-meta"></p>
+            <div class="card-actions">
+              <button id="adopt" class="btn btn-honey">Adopt</button>
+              <button id="turn-away" class="btn btn-sage">Not now</button>
+              <span id="stray-full" class="tag">The café is full</span>
+            </div>
+          </div>
+        </div>
+        <p id="stray-empty" class="empty">No one at the door. Strays wander by now and then.</p>
+      </div>
+
+      <div class="slot">
+        <div id="info" class="box paper card">
+          <canvas id="info-portrait" class="portrait" width="20" height="17"></canvas>
+          <div class="card-body">
+            <p class="card-title"><span id="info-name"></span> <span id="info-hungry" class="tag" hidden>Hungry</span></p>
+            <p id="info-meta" class="card-meta"></p>
+            <div class="fullness">
+              <span class="fullness-label">Fullness</span>
+              <span id="info-bar" class="bar"><span id="info-fill" class="bar-fill"></span></span>
+              <span id="info-value" class="fullness-value"></span>
+            </div>
+          </div>
+          <button id="info-close" class="btn btn-icon" aria-label="Close"><img class="icon icon-sm" data-icon="close" alt="" /></button>
+        </div>
+        <p id="info-empty" class="empty">Click a cat to check on them.</p>
+      </div>
+    </section>
   </main>
 
   <script src="config.js"></script>
   <script src="cats.js"></script>
   <script src="customers.js"></script>
+  <script src="strays.js"></script>
+  <script src="sprites.js"></script>
+  <script src="scene.js"></script>
   <script src="ui.js"></script>
   <script src="main.js"></script>
 </body>
