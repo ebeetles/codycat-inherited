@@ -1,7 +1,9 @@
 // ui.js — everything around the canvas: header, buttons, the door and cat
-// panels, the upgrades, cat book and welcome-back dialogs, messages, and mouse handling.
+// panels, the upgrades, decorations, cat book and welcome-back dialogs,
+// placing decorations, messages, and mouse handling.
 // Each frame it hands the state to Scene (scene.js), which draws the room.
-// Game logic stays in cats.js / customers.js / strays.js / upgrades.js / offline.js;
+// Game logic stays in cats.js / customers.js / strays.js / upgrades.js /
+// decor.js / staff.js / offline.js;
 // this file only reads state and calls the handlers main.js passes in.
 
 const UI = (() => {
@@ -15,7 +17,11 @@ const UI = (() => {
   let shownCoins = null;       // number shown in the header, eases toward state.coins
   let lastCoins = null;
   let holdCoins = false;       // keep the header still until offline coins are collected
+  let placing = null;          // decoration kind being placed, or null
+  let hoverSlot = null;        // free decoration spot under the mouse while placing
   const upgradeRows = {};      // upgrade id -> { button, note }
+  const decorRows = {};        // decoration kind -> { button, note }
+  const hearts = [];           // affection meter images on the cat card
 
   const STATUS = { walk: "Strolling", idle: "Taking a break", sleep: "Napping" };
 
@@ -74,14 +80,21 @@ const UI = (() => {
   // ---------- dialogs ----------
   function openDialog(dialog) {
     Sound.play("tap");
+    stopPlacing();
     if (dialog === els["book-dialog"]) buildBook(current);
     if (!dialog.open) dialog.showModal();
     renderUpgrades(current);
+    renderDecor(current);
   }
 
   function buildUpgrades(handlers) {
     const list = byId("upgrade-list");
+    let group = null;
     for (const up of Upgrades.LIST) {
+      if (up.group !== group) {
+        group = up.group;
+        list.append(make("li", "list-group", group));
+      }
       const row = make("li", "upgrade");
       const body = make("div", "upgrade-body");
       body.append(make("p", "upgrade-name", up.name), make("p", "upgrade-text", up.text));
@@ -106,11 +119,72 @@ const UI = (() => {
     for (const up of Upgrades.LIST) {
       const { button, note } = upgradeRows[up.id];
       const owned = Upgrades.owned(state, up.id);
+      const needs = Upgrades.needs(state, up.id);
       const short = Upgrades.cost(up.id) - state.coins;
       setText(button, owned ? "Owned" : "Buy");
       button.disabled = !Upgrades.canBuy(state, up.id);
-      setText(note, owned ? "" : short > 0 ? `${short} more coins needed` : "");
+      setText(note, owned ? "" : needs ? `Needs ${Upgrades.name(needs)}` : short > 0 ? `${short} more coins needed` : "");
     }
+  }
+
+  // ---------- decorations ----------
+  function buildDecor() {
+    const list = byId("decor-list");
+    for (const kind of Decor.KINDS) {
+      const info = CONFIG.DECOR[kind];
+      const row = make("li", "upgrade decor-row");
+      const pic = make("canvas", "decor-preview");
+      pic.width = 34;
+      pic.height = 48;
+      Scene.decorPreview(pic, kind);
+      const body = make("div", "upgrade-body");
+      body.append(make("p", "upgrade-name", info.name), make("p", "upgrade-text", info.text));
+      const price = make("span", "price");
+      const coin = make("img", "icon");
+      coin.alt = "";
+      setIcon(coin, "coin");
+      price.append(coin, String(info.cost));
+      const side = make("div", "upgrade-side");
+      const button = make("button", "btn btn-honey", "Place");
+      button.addEventListener("click", () => startPlacing(kind));
+      const note = make("p", "upgrade-note");
+      side.append(price, button, note);
+      row.append(pic, body, side);
+      list.append(row);
+      decorRows[kind] = { button, note };
+    }
+  }
+
+  function renderDecor(state) {
+    if (!els["decor-dialog"].open) return;
+    const free = Decor.freeSlots(state).length;
+    setText(els["decor-sub"], free
+      ? `${free} of ${CONFIG.DECOR_SLOTS.length} spots free. Pick a decoration, then click a glowing spot in the café.`
+      : "Every spot has a decoration now.");
+    for (const kind of Decor.KINDS) {
+      const { button, note } = decorRows[kind];
+      const short = Decor.cost(kind) - state.coins;
+      button.disabled = !Decor.canBuy(state, kind);
+      setText(note, !free ? "No free spots" : short > 0 ? `${short} more coins needed` : "");
+    }
+  }
+
+  // Placing: the dialog closes, free spots glow, and a click on one buys and
+  // places the decoration. Esc or Cancel stops without charging.
+  function startPlacing(kind) {
+    Sound.play("tap");
+    els["decor-dialog"].close();
+    placing = kind;
+    hoverSlot = null;
+    selectedCatId = null;
+    setText(els["place-text"], `Click a glowing spot to place the ${CONFIG.DECOR[kind].name.toLowerCase()}.`);
+    els["place-bar"].hidden = false;
+  }
+
+  function stopPlacing() {
+    placing = null;
+    hoverSlot = null;
+    if (els["place-bar"]) els["place-bar"].hidden = true;
   }
 
   function buildBook(state) {
@@ -127,7 +201,8 @@ const UI = (() => {
       pic.height = 17;
       Scene.portrait(pic, known ? entry.look : null, 0);
       const name = make("p", "book-name", known ? entry.name : "???");
-      const look = make("p", "book-look", known ? CONFIG.CAT_LOOKS[entry.look].label : "Not adopted yet");
+      const pers = CONFIG.PERSONALITIES[entry.personality];
+      const look = make("p", "book-look", known ? `${CONFIG.CAT_LOOKS[entry.look].label} · ${pers.label}` : "Not adopted yet");
       const about = make("p", "book-about", known ? entry.about : "Maybe they'll stop by the door one evening.");
       card.append(pic, name, look, about);
       grid.append(card);
@@ -180,7 +255,8 @@ const UI = (() => {
     for (const id of ["coins", "cat-count", "stat-coins", "refill", "shop", "message", "info", "info-name", "info-meta",
       "info-value", "info-bar", "info-fill", "info-hungry", "info-portrait", "info-empty", "stray-panel", "stray-text",
       "stray-meta", "stray-full", "stray-portrait", "stray-empty", "adopt", "mute-btn", "mute-icon",
-      "upgrades-dialog", "book-dialog", "away-dialog"]) {
+      "upgrades-dialog", "book-dialog", "away-dialog", "decor-dialog", "decor-sub", "place-bar", "place-text",
+      "info-hearts", "info-affection"]) {
       els[id] = byId(id);
     }
 
@@ -210,7 +286,12 @@ const UI = (() => {
     });
     byId("upgrades-btn").addEventListener("click", () => openDialog(els["upgrades-dialog"]));
     byId("book-btn").addEventListener("click", () => openDialog(els["book-dialog"]));
-    for (const dialog of [els["upgrades-dialog"], els["book-dialog"]]) {
+    byId("decor-btn").addEventListener("click", () => openDialog(els["decor-dialog"]));
+    byId("place-cancel").addEventListener("click", () => {
+      Sound.play("tap");
+      stopPlacing();
+    });
+    for (const dialog of [els["upgrades-dialog"], els["book-dialog"], els["decor-dialog"]]) {
       dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
       // Clicking the dimmed area outside the dialog closes it.
       dialog.addEventListener("click", (e) => {
@@ -221,23 +302,51 @@ const UI = (() => {
       if (e.target === els["away-dialog"]) els["away-dialog"].close();
     });
     buildUpgrades(handlers);
+    buildDecor();
+    for (let i = 0; i < 5; i++) {
+      const img = make("img", "icon");
+      img.alt = "";
+      setIcon(img, "heartEmpty");
+      els["info-hearts"].append(img);
+      hearts.push(img);
+    }
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !document.querySelector("dialog[open]")) selectedCatId = null;
+      if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      if (placing) stopPlacing();
+      else selectedCatId = null;
     });
 
     els.shop.addEventListener("click", (e) => {
-      const id = current && Scene.catAt(current, e.clientX, e.clientY);
+      if (!current) return;
+      if (placing) {
+        const slot = Scene.slotAt(current, e.clientX, e.clientY);
+        if (slot != null && handlers.onPlace(placing, slot) === "placed") stopPlacing();
+        return;
+      }
+      const id = Scene.catAt(current, e.clientX, e.clientY);
       if (id == null) return;
+      const cat = current.cats.find((c) => c.id === id);
       selectedCatId = id;
-      Scene.petCat(current.cats.find((c) => c.id === id));
+      handlers.onPet(cat);
+      Scene.petCat(cat);
       Sound.meow(id);
     });
     els.shop.addEventListener("mousemove", (e) => {
-      hoverCatId = current && Scene.catAt(current, e.clientX, e.clientY);
+      if (!current) return;
+      if (placing) {
+        hoverSlot = Scene.slotAt(current, e.clientX, e.clientY);
+        hoverCatId = null;
+        els.shop.style.cursor = hoverSlot == null ? "default" : "pointer";
+        return;
+      }
+      hoverCatId = Scene.catAt(current, e.clientX, e.clientY);
       els.shop.style.cursor = hoverCatId == null ? "default" : "pointer";
     });
-    els.shop.addEventListener("mouseleave", () => (hoverCatId = null));
+    els.shop.addEventListener("mouseleave", () => {
+      hoverCatId = null;
+      hoverSlot = null;
+    });
   }
 
   // ---------- feedback ----------
@@ -264,10 +373,29 @@ const UI = (() => {
     Sound.play("refill");
   }
 
+  const UPGRADE_TOASTS = {
+    seats: "Third table added",
+    capacity: `Room for ${CONFIG.UPGRADES.capacity.maxCats} cats now`,
+    loft: `The cat loft is open: room for ${CONFIG.UPGRADES.loft.maxCats} cats`,
+    matcha: "Matcha latte is on the menu",
+    staff: `${CONFIG.STAFF_NAME} is on shift`,
+  };
+
   function showUpgrade(id) {
     Scene.upgrade(id);
     Sound.play("upgrade");
-    toast(id === "seats" ? "Third table added" : `Room for ${CONFIG.UPGRADES.capacity.maxCats} cats now`);
+    toast(UPGRADE_TOASTS[id]);
+  }
+
+  function showPlaced(kind, slot) {
+    Scene.placed(kind, slot);
+    Sound.play("upgrade");
+    toast(`${CONFIG.DECOR[kind].name} placed`);
+  }
+
+  // The staff member refilled the bowl; the scene shows her walking over.
+  function showStaffRefill() {
+    Scene.staffRefill();
   }
 
   // ---------- header ----------
@@ -297,10 +425,15 @@ const UI = (() => {
     const stray = state.stray;
     els["stray-panel"].classList.toggle("visible", !!stray);
     els["stray-empty"].hidden = !!stray;
-    if (!stray) return;
+    if (!stray) {
+      const allHome = CONFIG.CAT_ROSTER.every((entry) => state.cats.some((c) => c.name === entry.name));
+      setText(els["stray-empty"], allHome ? "Every cat has a home here now." : "No one at the door. Strays wander by now and then.");
+      return;
+    }
     const look = CONFIG.CAT_LOOKS[stray.look].label.toLowerCase();
+    const pers = CONFIG.PERSONALITIES[stray.personality];
     setText(els["stray-text"], `${stray.name} is waiting at the door.`);
-    setText(els["stray-meta"], `A ${look} stray looking for a home.`);
+    setText(els["stray-meta"], `A ${pers ? pers.label.toLowerCase() + " " : ""}${look} stray looking for a home.`);
     const full = !Strays.canAdopt(state);
     els.adopt.disabled = full;
     els["stray-full"].classList.toggle("visible", full);
@@ -316,7 +449,18 @@ const UI = (() => {
     if (!cat) return;
     const hungry = Cats.isHungry(cat);
     setText(els["info-name"], cat.name);
-    setText(els["info-meta"], `${CONFIG.CAT_LOOKS[cat.look].label} · ${STATUS[cat.mode]}`);
+    const pers = CONFIG.PERSONALITIES[cat.personality];
+    setText(els["info-meta"], [CONFIG.CAT_LOOKS[cat.look].label, pers && pers.label, STATUS[cat.mode]].filter(Boolean).join(" · "));
+    els["info-meta"].title = pers ? pers.text : "";
+    const per = CONFIG.AFFECTION_MAX / hearts.length;
+    hearts.forEach((img, i) => {
+      const name = cat.affection >= (i + 1) * per ? "heart" : "heartEmpty";
+      if (img.dataset.icon !== name) {
+        img.dataset.icon = name;
+        setIcon(img, name);
+      }
+    });
+    setText(els["info-affection"], `${cat.affection}/${CONFIG.AFFECTION_MAX}`);
     setText(els["info-value"], `${cat.fullness}/${CONFIG.FULLNESS_MAX}`);
     els["info-fill"].style.width = (cat.fullness / CONFIG.FULLNESS_MAX) * 100 + "%";
     els["info-bar"].classList.toggle("low", hungry);
@@ -332,12 +476,14 @@ const UI = (() => {
     clock += dt;
     if (hoverCatId != null && !state.cats.some((c) => c.id === hoverCatId)) hoverCatId = null;
 
-    Scene.render(state, dt, { selectedId: selectedCatId, hoverId: hoverCatId });
+    if (placing && !Decor.freeSlots(state).length) stopPlacing();
+    Scene.render(state, dt, { selectedId: selectedCatId, hoverId: hoverCatId, placing, hoverSlot });
     renderHud(state, dt);
     renderStray(state);
     renderInfo(state);
     renderUpgrades(state);
+    renderDecor(state);
   }
 
-  return { init, render, showMessage, showPayment, showRefill, showUpgrade, showAway };
+  return { init, render, showMessage, showPayment, showRefill, showUpgrade, showPlaced, showStaffRefill, showAway };
 })();

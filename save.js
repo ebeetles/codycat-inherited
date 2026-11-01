@@ -1,6 +1,8 @@
 // save.js — keeps the game in the browser's local storage between visits.
-// SPEC P1 #22. Saves coins, cats (with fullness), upgrades, the collection
-// book and the sound setting. Customers and a waiting stray aren't saved.
+// SPEC P1 #22. Saves coins, cats (with fullness and affection), upgrades,
+// decorations, the collection book and the sound setting. Customers and a
+// waiting stray aren't saved. Saves from before decorations and affection
+// load fine: missing values start empty.
 // If storage is blocked or the save is damaged, the game simply starts fresh.
 
 const Save = (() => {
@@ -11,8 +13,11 @@ const Save = (() => {
       version: VERSION,
       savedAt: Date.now(),
       coins: state.coins,
-      cats: state.cats.map((c) => ({ id: c.id, name: c.name, look: c.look, fullness: c.fullness, decayTimer: c.decayTimer })),
+      cats: state.cats.map((c) => ({
+        id: c.id, name: c.name, look: c.look, fullness: c.fullness, decayTimer: c.decayTimer, affection: c.affection,
+      })),
       upgrades: state.upgrades,
+      decor: state.decor,
       book: state.book,
       muted: state.muted,
     };
@@ -37,10 +42,17 @@ const Save = (() => {
       (c) => c && Number.isInteger(c.id) && typeof c.name === "string" && CONFIG.CAT_LOOKS[c.look] && Number.isFinite(c.fullness)
     );
     if (!cats.length) return null;
+    const upgrades = {};
+    for (const id of Object.keys(CONFIG.UPGRADES)) upgrades[id] = !!(data.upgrades && data.upgrades[id]);
+    const decor = CONFIG.DECOR_SLOTS.map((_, i) => {
+      const kind = Array.isArray(data.decor) ? data.decor[i] : null;
+      return CONFIG.DECOR[kind] ? kind : null;
+    });
     return {
       coins: Math.max(0, Math.floor(data.coins)),
       cats,
-      upgrades: { seats: !!(data.upgrades && data.upgrades.seats), capacity: !!(data.upgrades && data.upgrades.capacity) },
+      upgrades,
+      decor,
       book: Array.isArray(data.book) ? data.book.filter((n) => typeof n === "string") : [],
       muted: !!data.muted,
       savedAt: Number(data.savedAt) || 0,

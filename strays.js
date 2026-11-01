@@ -7,19 +7,20 @@ const Strays = (() => {
   }
 
   // Strays come from the roster (skipping the starting cat): any cat that
-  // doesn't already live here. Turned-away cats can come back.
+  // doesn't already live here. Turned-away cats can come back. Once every
+  // roster cat lives in the café there's no one left to come by (null).
   function pickCat(state) {
     const here = new Set(state.cats.map((c) => c.name));
-    const strays = CONFIG.CAT_ROSTER.slice(1);
-    const free = strays.filter((c) => !here.has(c.name));
-    return randomItem(free.length ? free : strays);
+    const free = CONFIG.CAT_ROSTER.slice(1).filter((c) => !here.has(c.name));
+    return free.length ? randomItem(free) : null;
   }
 
-  // Put a new stray at the door. Does nothing if one is already waiting.
+  // Put a new stray at the door. Does nothing if one is already waiting,
+  // or if every cat already lives here.
   function spawn(state) {
     if (state.stray) return;
     const pick = pickCat(state);
-    state.stray = Cats.create(pick.name, pick.look);
+    if (pick) state.stray = Cats.create(pick.name, pick.look);
   }
 
   // While no stray is waiting, roll the chance every STRAY_CHECK_SECONDS.

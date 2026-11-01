@@ -52,7 +52,7 @@ A new game starts with:
 - If a seat is free, the customer enters and takes a seat; if all seats are taken, no customer spawns that time.
 - A customer stays for 30 seconds, shown drinking coffee or playing with cats, then pays automatically and leaves.
 - Each customer's base payment is 20 coins.
-- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher.
+- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher (plus 10 for a matcha latte once it's unlocked; see P2 #29).
 - Coins are added immediately at checkout, and the seat becomes free again.
 - Hungry cats do not stop customers from coming or paying the base amount, so the player can always earn back the coins needed for food.
 

@@ -1,6 +1,7 @@
 // main.js — creates the game state (or loads the saved one) and runs the main loop.
 // Load order (see index.html): config.js, cats.js, customers.js, strays.js,
-// upgrades.js, save.js, offline.js, sprites.js, sound.js, scene.js, ui.js, main.js
+// upgrades.js, decor.js, staff.js, save.js, offline.js, sprites.js, sound.js,
+// scene.js, ui.js, main.js
 
 function createInitialState(saved) {
   const state = {
@@ -12,7 +13,8 @@ function createInitialState(saved) {
     customerSpawnSeconds: CONFIG.CUSTOMER_SPAWN_SECONDS,
     stray: null,          // the cat waiting at the door, or null
     strayCheckTimer: 0,   // counts up to CONFIG.STRAY_CHECK_SECONDS
-    upgrades: { seats: false, capacity: false },
+    upgrades: { seats: false, capacity: false, loft: false, matcha: false, staff: false },
+    decor: CONFIG.DECOR_SLOTS.map(() => null), // decoration kind per spot, or null
     maxCats: CONFIG.MAX_CATS,
     book: [],             // names of every cat ever adopted (collection book)
     muted: false,
@@ -22,6 +24,7 @@ function createInitialState(saved) {
     state.coins = saved.coins;
     state.cats = saved.cats.map(Cats.restore);
     state.upgrades = saved.upgrades;
+    state.decor = saved.decor;
     state.book = saved.book;
     state.muted = saved.muted;
   } else {
@@ -59,7 +62,19 @@ UI.init({
     const result = Upgrades.buy(state, id);
     if (result === "bought") UI.showUpgrade(id);
     else if (result === "poor") UI.showMessage("Not enough coins");
+    else if (result === "locked") UI.showMessage(`Buy ${Upgrades.name(Upgrades.needs(state, id))} first`);
     Save.write(state);
+  },
+  onPlace(kind, slot) {
+    const result = Decor.place(state, kind, slot);
+    if (result === "placed") UI.showPlaced(kind, slot);
+    else if (result === "poor") UI.showMessage("Not enough coins");
+    else UI.showMessage("That spot is taken");
+    Save.write(state);
+    return result;
+  },
+  onPet(cat) {
+    Cats.pet(cat);
   },
   onToggleSound() {
     state.muted = !state.muted;
@@ -77,6 +92,7 @@ window.addEventListener("pagehide", () => Save.write(state));
 function update(dt) {
   for (const cat of state.cats) Cats.update(cat, dt);
   Customers.update(state, dt, UI.showPayment);
+  Staff.update(state, UI.showStaffRefill);
   Strays.update(state, dt);
 }
 

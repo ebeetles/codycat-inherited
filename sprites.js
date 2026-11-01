@@ -228,6 +228,8 @@ const Sprites = (() => {
     ".okssssssko.",
     ".ooSSSSSSoo.",
   ];
+  // A shop apron over the shirt and upper legs, for staff.
+  const APRON = ["....w..w....", "...wwwwww...", "...wwwwww...", "...WWWWWW...", "...wwwwww...", "...WWWWWW..."];
   const LEGS = {
     stand: ["..oppppppo..", "..oppooppo..", "..oppooppo..", "..offooffo..", "..oooooooo.."],
     stepA: ["..oppppppo..", "..oppooppo..", "..offooppo..", "..oooooffo..", "......oooo.."],
@@ -239,6 +241,9 @@ const Sprites = (() => {
   const SHIRTS = ["#7fa7c9", "#d98a8a", "#8fb38a", "#e0b45a", "#a58ac9", "#e9e2d2"];
   const PANTS = ["#4a4e69", "#5b4636", "#3d5a6c"];
   const STYLES = ["short", "bun", "beanie", "long"];
+
+  // Staff wear the same shapes as customers, plus an apron.
+  const STAFF_LOOK = { skin: "#e8b48f", hair: "#2d2a35", shirt: "#8fb38a", pants: "#4a4e69", style: "bun", hat: "#8fb38a", apron: "#fff4dc" };
 
   // A stable look for each customer id.
   function customerLook(id) {
@@ -254,18 +259,20 @@ const Sprites = (() => {
   }
 
   function customer(look, pose) {
-    const key = `cust:${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.hat}:${pose}`;
+    const key = `cust:${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.hat}${look.apron || ""}:${pose}`;
     return cached(key, () => {
       const m = toMatrix([], 12, 20);
       stamp(m, HEADS[look.style], 0, 0);
       stamp(m, BODY, 0, 11);
       stamp(m, LEGS[pose === "seated" ? "stand" : pose], 0, 15);
+      if (look.apron) stamp(m, APRON, 0, 11);
       if (look.style === "long") stamp(m, LONG_HAIR_FRONT, 0, 11);
       const rows = toRows(pose === "seated" ? m.slice(0, 15) : m);
       return fromGrid(rows, {
         o: "#3a2828", k: look.skin, h: look.hair, H: shade(look.hair, 0.8), e: "#2a1c1c",
         m: shade(look.skin, 0.9), s: look.shirt, S: shade(look.shirt, 0.82), p: look.pants,
         f: "#4a3530", a: look.hat, A: shade(look.hat, 0.8),
+        w: look.apron, W: look.apron && shade(look.apron, 0.88),
       });
     });
   }
@@ -279,6 +286,10 @@ const Sprites = (() => {
     heart: {
       rows: [".oo.oo.", "orrorro", "orwrrro", "orrrrro", ".orrro.", "..oro..", "...o..."],
       pal: { o: "#7a2a3a", r: "#ec6a83", w: "#ffd3db" },
+    },
+    heartEmpty: {
+      rows: [".oo.oo.", "oeeoeeo", "oeeeeeo", "oeeeeeo", ".oeeeo.", "..oeo..", "...o..."],
+      pal: { o: "#a8714a", e: "#ead2a8" },
     },
     heartSmall: {
       rows: ["r.r", "rrr", ".r."],
@@ -312,6 +323,10 @@ const Sprites = (() => {
       rows: ["oooo.", "owwoo", "owwoo", ".oo..", "ooooo"],
       pal: { o: "#7a5a4a", w: "#fff8ee" },
     },
+    cupMatcha: {
+      rows: ["oooo.", "oggoo", "oGgoo", ".oo..", "ooooo"],
+      pal: { o: "#5a6a4a", g: "#9cc77a", G: "#d8eec4" },
+    },
     bowlEmpty: {
       rows: ["..............", "..............", "..oooooooooo..", ".oiiiiiiiiiio.", "obbbbbbbbbbbbo", "obwbbbbbbbbbbo", ".obbbbbbbbbbo.", "..oooooooooo.."],
       pal: null,
@@ -335,6 +350,10 @@ const Sprites = (() => {
     shop: {
       rows: [".oooooo.", "orwrwrwo", "orwrwrwo", ".oooooo.", ".owwwwo.", ".obbwgo.", ".obbwwo.", "oooooooo"],
       pal: { o: "#3d261b", r: "#d9776a", w: "#fff4dc", b: "#a8714a", g: "#8fc1e3" },
+    },
+    plant: {
+      rows: ["..g.g...", ".gGgGg..", "gGggGgg.", ".gggGg..", "..oooo..", ".otttto.", ".otttto.", "..oooo.."],
+      pal: { o: "#3d261b", g: "#5f8a5d", G: "#8fc28a", t: "#d9776a" },
     },
     soundOn: {
       rows: ["...o..o.", "..oo...o", "oooo.o.o", "oooo.o.o", "oooo.o.o", "..oo...o", "...o..o."],
@@ -368,5 +387,5 @@ const Sprites = (() => {
     return cached(`url:${name}`, () => icon(name).toDataURL());
   }
 
-  return { cat, silhouette, customer, customerLook, icon, iconDataURL, shade, makeCanvas, CAT_PALETTES };
+  return { cat, silhouette, customer, customerLook, STAFF_LOOK, icon, iconDataURL, shade, makeCanvas, CAT_PALETTES };
 })();

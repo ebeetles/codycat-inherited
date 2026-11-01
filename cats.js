@@ -1,5 +1,6 @@
 // cats.js — cat data, autonomous behavior, fullness, and feeding.
-// SPEC 2.2. Does not touch the DOM; ui.js draws cats from this data.
+// SPEC 2.2, plus personalities and affection (P2 #27). Does not touch the
+// DOM; ui.js draws cats from this data.
 
 const Cats = (() => {
   let nextId = 1;
@@ -19,6 +20,12 @@ const Cats = (() => {
     cat.y = Math.min(Math.max(cat.y, a.y), a.y + a.h);
   }
 
+  // A roster cat's personality comes from CONFIG.CAT_ROSTER; others have none.
+  function personalityOf(name) {
+    const entry = CONFIG.CAT_ROSTER.find((c) => c.name === name);
+    return entry && CONFIG.PERSONALITIES[entry.personality] ? entry.personality : null;
+  }
+
   // Create a cat. Each cat has its own id, name and fullness,
   // even if two cats share the same look.
   function create(name, look) {
@@ -27,6 +34,8 @@ const Cats = (() => {
       id: nextId++,
       name,
       look,
+      personality: personalityOf(name),
+      affection: 0,
       fullness: CONFIG.FULLNESS_MAX,
       decayTimer: 0,
       x: p.x,
@@ -40,22 +49,26 @@ const Cats = (() => {
     return cat;
   }
 
-  // Rebuild a cat from a save: same id, name, look and fullness, at a fresh
-  // spot in the room. Later ids continue after the highest restored one.
+  // Rebuild a cat from a save: same id, name, look, fullness and affection,
+  // at a fresh spot in the room. Later ids continue after the highest restored one.
   function restore(saved) {
     const cat = create(saved.name, saved.look);
     cat.id = saved.id;
     cat.fullness = Math.max(0, Math.min(CONFIG.FULLNESS_MAX, saved.fullness));
     cat.decayTimer = saved.decayTimer || 0;
+    cat.affection = Math.max(0, Math.min(CONFIG.AFFECTION_MAX, saved.affection || 0));
     nextId = Math.max(nextId, saved.id + 1);
     return cat;
   }
 
-  // Pick the cat's next activity: 50% walk, 30% idle, 20% sleep.
+  // Pick the cat's next activity. By default 50% walk, 30% idle, 20% sleep;
+  // a personality changes the odds, how long each lasts, and walking speed.
   function chooseNextMode(cat) {
+    const p = CONFIG.PERSONALITIES[cat.personality];
+    const odds = p ? p.odds : CONFIG.CAT_MODE_ODDS;
     const r = Math.random();
-    cat.mode = r < 0.5 ? "walk" : r < 0.8 ? "idle" : "sleep";
-    cat.modeTimer = randomBetween(CONFIG.CAT_MODE_SECONDS[cat.mode]);
+    cat.mode = r < odds.walk ? "walk" : r < odds.walk + odds.idle ? "idle" : "sleep";
+    cat.modeTimer = randomBetween(CONFIG.CAT_MODE_SECONDS[cat.mode]) * (p ? p.times[cat.mode] : 1);
     cat.target = cat.mode === "walk" ? randomPointInArea() : null;
   }
 
@@ -74,7 +87,8 @@ const Cats = (() => {
       const dx = cat.target.x - cat.x;
       const dy = cat.target.y - cat.y;
       const dist = Math.hypot(dx, dy);
-      const step = CONFIG.CAT_SPEED * dt;
+      const p = CONFIG.PERSONALITIES[cat.personality];
+      const step = CONFIG.CAT_SPEED * (p ? p.speed : 1) * dt;
       if (Math.abs(dx) > 1) cat.facing = dx < 0 ? -1 : 1;
       if (dist <= step) {
         cat.x = cat.target.x;
@@ -100,6 +114,11 @@ const Cats = (() => {
     return cat.fullness < CONFIG.HUNGRY_BELOW;
   }
 
+  // Clicking a cat raises its affection, up to AFFECTION_MAX.
+  function pet(cat) {
+    cat.affection = Math.min(CONFIG.AFFECTION_MAX, cat.affection + CONFIG.AFFECTION_PER_PET);
+  }
+
   // "Refill food": costs FOOD_COST, feeds every cat. Returns false if too poor.
   function refillAll(state) {
     if (state.coins < CONFIG.FOOD_COST) return false;
@@ -110,5 +129,5 @@ const Cats = (() => {
     return true;
   }
 
-  return { create, restore, update, isHungry, refillAll };
+  return { create, restore, update, isHungry, pet, refillAll };
 })();

@@ -17,6 +17,10 @@ const Scene = (() => {
   const BOWL = { x: Math.round(CONFIG.BOWL_POS.x / LP), y: Math.round(CONFIG.BOWL_POS.y / LP) };
   const STRAY = { x: Math.round(CONFIG.STRAY_POS.x / LP), y: Math.round(CONFIG.STRAY_POS.y / LP) };
   const CLOCK = { x: 226, y: 30 };
+  const SLOTS = CONFIG.DECOR_SLOTS.map((p) => ({ x: Math.round(p.x / LP), y: Math.round(p.y / LP) }));
+  const STAFF_HOME = { x: 186, y: 88 };            // beside the counter
+  const STAFF_AT_BOWL = { x: BOWL.x + 12, y: BOWL.y };
+  const LOFT = { x: 256, y: 20 };                  // the loft doorway, over Cream's portrait
   const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let canvas, ctx;
@@ -577,13 +581,14 @@ const Scene = (() => {
     for (const dx of [-7, -3, 2, 6]) rect(ctx, x + dx, 47, 1, 14, "#7d4f33");
     // Customer seated behind the table.
     const seated = customer && vis && vis.seated;
+    const cupIcon = customer && customer.matcha ? "cupMatcha" : "cup";
     let sipping = false;
     if (seated) {
       const img = Sprites.customer(vis.look, "seated");
       const breathe = calm ? 0 : Math.floor((time + customer.id) / 1.6) % 2;
       draw(img, x - 6, 47 + breathe);
       sipping = customer.activity === "coffee" && (time + customer.id * 1.7) % 7 < 1.4;
-      if (sipping) draw(Sprites.icon("cup"), x - 3, 56 + breathe);
+      if (sipping) draw(Sprites.icon(cupIcon), x - 3, 56 + breathe);
     }
     // Table with a scalloped cloth.
     rect(ctx, x - 12, 61, 24, 4, "#f4ead8");
@@ -602,13 +607,14 @@ const Scene = (() => {
     rect(ctx, x - 8, 54, 1, 1, "#f2dc8a");
     if (!seated) return;
     if (customer.activity === "coffee") {
-      if (!sipping) draw(Sprites.icon("cup"), x + 3, 57);
+      if (!sipping) draw(Sprites.icon(cupIcon), x + 3, 57);
       vis.steamT = (vis.steamT || 0) - frameDt;
       if (!calm && vis.steamT <= 0) {
         vis.steamT = 0.9;
         particles.push({ kind: "steam", x: sipping ? x : x + 5, y: sipping ? 54 : 55, vx: 0, vy: -5, life: 1.4, max: 1.4, seed: Math.random() * 6 });
       }
     } else {
+      if (customer.matcha) draw(Sprites.icon("cupMatcha"), x - 5, 57);
       // Waving a feather toy for the cats.
       const sw = calm ? 0.5 : Math.sin(time * 4 + customer.id);
       const tx = x + 6 + sw * 6, ty = 50 - Math.abs(sw) * 2;
@@ -695,6 +701,253 @@ const Scene = (() => {
     rect(ctx, 296, 184, 22, 1, "#9e4f2e");
     rect(ctx, 300, 186, 1, 12, "#de8a5c");
     rect(ctx, 314, 186, 2, 13, "#9e4f2e");
+  }
+
+  // ------------------------------------------------------------ decorations (SPEC P2 #26)
+  // Each is drawn with its bottom middle at (x, y), into any canvas g, so the
+  // same art works in the room and in the decorations panel. t animates.
+  function floorShadow(g, x, y, rx) {
+    g.fillStyle = "rgba(70, 35, 20, 0.2)";
+    g.fillRect(x - rx, y, rx * 2, 1);
+    g.fillRect(x - rx + 2, y + 1, rx * 2 - 4, 1);
+  }
+
+  const DECOR_ART = {
+    cushion(g, x, y) {
+      floorShadow(g, x, y, 11);
+      ellipse(g, x, y - 3, 11, 3, "#a8524a");
+      ellipse(g, x, y - 4, 11, 3, "#d9776a");
+      ellipse(g, x - 1, y - 5, 8, 2, "#e8958a");
+      rect(g, x - 4, y - 6, 3, 1, "#f2b0a4");
+      rect(g, x, y - 4, 1, 1, "#a8524a");
+      for (const dx of [-12, 12]) {
+        rect(g, x + dx, y - 4, 1, 1, "#c7832e");
+        rect(g, x + dx, y - 3, 1, 2, "#f2b45a");
+      }
+    },
+    yarn(g, x, y) {
+      floorShadow(g, x, y, 10);
+      // Loose strand across the floor.
+      line(g, x + 7, y - 9, x + 12, y - 3, "#7fa7c9");
+      line(g, x + 12, y - 3, x + 17, y - 1, "#7fa7c9");
+      ellipse(g, x - 4, y - 11, 4, 3, "#ec8f9e");
+      line(g, x - 7, y - 12, x - 2, y - 9, "#f6c1ca");
+      ellipse(g, x + 3, y - 12, 4, 4, "#7fa7c9");
+      line(g, x + 1, y - 15, x + 5, y - 10, "#b3d0e8");
+      ellipse(g, x + 7, y - 9, 2, 2, "#f2b45a");
+      // Wicker basket.
+      rect(g, x - 8, y - 9, 17, 9, "#b07d56");
+      for (let r = 0; r < 4; r++) {
+        for (let dx = (r % 2) * 2; dx < 17; dx += 4) rect(g, x - 8 + dx, y - 8 + r * 2, 2, 1, "#8a5a3c");
+      }
+      rect(g, x - 9, y - 10, 19, 2, "#d0a070");
+      rect(g, x - 9, y - 10, 19, 1, "#e2b886");
+      rect(g, x - 7, y - 1, 15, 1, "#7a4e30");
+    },
+    lamp(g, x, y, t, glow) {
+      if (glow) {
+        const a = 0.07 + (calm ? 0 : Math.sin(t * 2.3) * 0.008);
+        for (const [r, k] of [[18, 1], [11, 1.4]]) {
+          g.fillStyle = `rgba(255, 214, 150, ${a * k})`;
+          for (let dy = -r; dy <= r; dy++) {
+            const w = Math.round(Math.sqrt(r * r - dy * dy) * 1.1);
+            g.fillRect(x - w, y - 38 + dy, w * 2 + 1, 1);
+          }
+        }
+        g.fillStyle = `rgba(255, 214, 150, ${a})`;
+        for (let dy = -3; dy <= 3; dy++) {
+          const w = Math.round(16 * Math.sqrt(1 - (dy * dy) / 10));
+          g.fillRect(x - w, y + dy, w * 2 + 1, 1);
+        }
+      }
+      floorShadow(g, x, y, 6);
+      ellipse(g, x, y - 1, 5, 1, "#4a2e20");
+      rect(g, x - 4, y - 2, 9, 1, "#6e4630");
+      rect(g, x, y - 34, 1, 32, "#4a2e20");
+      rect(g, x + 1, y - 34, 1, 32, "#7d4f33");
+      // Shade: wider at the bottom, with a fringe.
+      for (let r = 0; r < 10; r++) {
+        const half = 5 + Math.floor(r / 2);
+        rect(g, x - half, y - 44 + r, half * 2 + 2, 1, r === 0 ? "#f7d88a" : r % 3 ? "#f2c06a" : "#e9b45a");
+      }
+      rect(g, x - 9, y - 34, 20, 1, "#fff2c8");
+      for (let dx = -9; dx <= 10; dx += 2) rect(g, x + dx, y - 33, 1, 2, "#d9776a");
+    },
+    tank(g, x, y, t) {
+      floorShadow(g, x, y, 12);
+      // Cabinet.
+      rect(g, x - 12, y - 10, 24, 10, "#7d4f33");
+      rect(g, x - 12, y - 10, 24, 1, "#a8714a");
+      rect(g, x - 10, y - 8, 9, 7, "#6e4429");
+      rect(g, x + 1, y - 8, 9, 7, "#6e4429");
+      rect(g, x - 3, y - 5, 1, 1, "#f2c14e");
+      rect(g, x + 3, y - 5, 1, 1, "#f2c14e");
+      // Glass, water, gravel.
+      rect(g, x - 11, y - 26, 22, 16, "#3d4a43");
+      rect(g, x - 10, y - 24, 20, 13, "#6fa8c9");
+      rect(g, x - 10, y - 24, 20, 2, "#9cd0e8");
+      rect(g, x - 10, y - 13, 20, 2, "#d9b77a");
+      for (let dx = 0; dx < 20; dx += 3) rect(g, x - 10 + dx, y - 12, 1, 1, "#a8875c");
+      // Castle and weed.
+      rect(g, x + 3, y - 19, 6, 6, "#b9b0a6");
+      for (let dx = 0; dx < 6; dx += 2) rect(g, x + 3 + dx, y - 20, 1, 1, "#b9b0a6");
+      rect(g, x + 5, y - 16, 2, 3, "#3d4a43");
+      for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 6; j++) {
+          const sw = calm ? 0 : Math.round(Math.sin(t * 1.5 + i * 2 + j * 0.5) * (j / 6) * 1.5);
+          rect(g, x - 8 + i * 3 + sw, y - 14 - j, 1, 1, j % 2 ? "#5f8a5d" : "#8fc28a");
+        }
+      }
+      // Two goldfish swimming back and forth.
+      for (let i = 0; i < 2; i++) {
+        const u = calm ? 0.3 + i * 0.4 : (t * (0.12 + i * 0.05) + i * 0.5) % 1;
+        const p = u < 0.5 ? u * 2 : 2 - u * 2;
+        const fx = Math.round(x - 8 + p * 14), fy = y - 21 + i * 4 + (calm ? 0 : Math.round(Math.sin(t * 2 + i) * 0.6));
+        const right = u < 0.5;
+        rect(g, fx, fy, 3, 2, "#f28a3c");
+        rect(g, right ? fx - 1 : fx + 3, fy, 1, 2, "#f7b46a");
+        rect(g, right ? fx + 2 : fx, fy, 1, 1, "#2a1c1c");
+      }
+      // Bubbles from the castle.
+      if (!calm) {
+        for (let i = 0; i < 3; i++) {
+          const v = (t * 0.5 + i / 3) % 1;
+          rect(g, x + 6 + Math.round(Math.sin(t * 3 + i) * 0.6), Math.round(y - 20 - v * 3.5), 1, 1, "#e6f6ff");
+        }
+      }
+      rect(g, x - 12, y - 27, 24, 2, "#4a2e20");
+      rect(g, x - 9, y - 23, 1, 9, "rgba(255,255,255,0.35)");
+    },
+  };
+
+  function drawDecor(g, kind, x, y, t, glow = true) {
+    DECOR_ART[kind](g, x, y, t, glow);
+  }
+
+  // Free spots while placing: a glowing pool with a ring and a bobbing arrow,
+  // and a see-through preview of the decoration under the mouse.
+  function drawSlotMarkers(state, view) {
+    const pulse = calm ? 0.5 : 0.4 + Math.sin(time * 5) * 0.15;
+    state.decor.forEach((kind, i) => {
+      if (kind) return;
+      const s = SLOTS[i];
+      const hover = view.hoverSlot === i;
+      ctx.globalAlpha = hover ? 0.7 : pulse;
+      ellipse(ctx, s.x, s.y - 2, 13, 4, "#fff0c2");
+      ctx.globalAlpha = 1;
+      for (let a = 0; a < 32; a++) {
+        if (a % 4 === 3) continue;
+        const ang = (a / 32) * Math.PI * 2 + (calm ? 0 : time * 0.8);
+        rect(ctx, Math.round(s.x + Math.cos(ang) * 14), Math.round(s.y - 2 + Math.sin(ang) * 5), 1, 1, "#c7832e");
+      }
+      if (hover) {
+        ctx.globalAlpha = 0.65;
+        drawDecor(ctx, view.placing, s.x, s.y, time, false);
+        ctx.globalAlpha = 1;
+      } else {
+        const bob = calm ? 0 : Math.round(Math.sin(time * 4 + i) * 1.5);
+        draw(Sprites.icon("arrow"), s.x - 3, s.y - 16 + bob);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------ staff (SPEC P2 #29)
+  // She waits by the counter; when she refills the bowl she walks over and back.
+  // The refill itself already happened in the game logic.
+  let staffTrip = null; // { phase: "go" | "pour" | "back", x, y, t }
+
+  function updateStaff(dt) {
+    if (!staffTrip) return;
+    const goal = staffTrip.phase === "go" ? STAFF_AT_BOWL : STAFF_HOME;
+    if (staffTrip.phase === "pour") {
+      staffTrip.t -= dt;
+      if (staffTrip.t <= 0) staffTrip.phase = "back";
+      return;
+    }
+    const dx = goal.x - staffTrip.x, dy = goal.y - staffTrip.y;
+    const dist = Math.hypot(dx, dy), step = 50 * dt;
+    if (dist <= step) {
+      staffTrip.x = goal.x;
+      staffTrip.y = goal.y;
+      if (staffTrip.phase === "go") {
+        staffTrip.phase = "pour";
+        staffTrip.t = 0.8;
+        burst("sparkle", BOWL.x, BOWL.y - 6, 7, 12);
+        particles.push({ kind: "coin", text: `-${CONFIG.FOOD_COST}`, x: BOWL.x, y: BOWL.y - 16, vx: 0, vy: -9, life: 1.2, max: 1.2, seed: 0 });
+        Sound.play("refill");
+      } else {
+        staffTrip = null;
+      }
+    } else {
+      staffTrip.x += (dx / dist) * step;
+      staffTrip.y += (dy / dist) * step;
+    }
+  }
+
+  function staffPos() {
+    return staffTrip ? { x: staffTrip.x, y: staffTrip.y } : STAFF_HOME;
+  }
+
+  function drawStaff() {
+    const p = staffPos();
+    const walking = staffTrip && staffTrip.phase !== "pour";
+    const pose = walking ? (Math.floor(time * 6) % 2 ? "stepA" : "stepB") : "stand";
+    const img = Sprites.customer(Sprites.STAFF_LOOK, pose);
+    const lift = walking && pose === "stepA" ? 1 : !walking && !calm && Math.floor(time / 1.8) % 2 ? 1 : 0;
+    const x = Math.round(p.x), y = Math.round(p.y);
+    shadow(x, y, 5);
+    draw(img, x - 6, y - img.height + 1 - lift);
+    if (staffTrip && staffTrip.phase === "pour") {
+      // Pouring kibble from a little scoop.
+      rect(ctx, x - 9, y - 11, 4, 2, "#cfd6dc");
+      if (!calm && Math.floor(time * 10) % 2) rect(ctx, x - 9, y - 9, 1, 2, "#b8783f");
+    }
+  }
+
+  // ------------------------------------------------------------ cat loft (SPEC P2 #29)
+  // An arched doorway in the back wall with stairs up to the cats' lounge.
+  let tailT = 4;
+
+  function drawLoft(dt) {
+    const x = LOFT.x, y = LOFT.y; // left edge of the frame, top of the arch
+    rect(ctx, x + 4, y, 14, 2, "#7d4f33");
+    rect(ctx, x + 2, y + 2, 18, 2, "#7d4f33");
+    rect(ctx, x, y + 4, 22, FLOOR_Y - y - 4, "#7d4f33");
+    rect(ctx, x + 4, y, 14, 1, "#a8714a");
+    rect(ctx, x, y + 4, 1, FLOOR_Y - y - 4, "#a8714a");
+    rect(ctx, x + 21, y + 4, 1, FLOOR_Y - y - 4, "#5e3b28");
+    // Inside: warm dark, with stairs climbing to the right.
+    rect(ctx, x + 5, y + 2, 12, 2, "#3b2a24");
+    rect(ctx, x + 3, y + 4, 16, FLOOR_Y - y - 4, "#3b2a24");
+    for (let i = 0; i < 7; i++) {
+      const sy = FLOOR_Y - 3 - i * 6;
+      if (sy < y + 8) break;
+      rect(ctx, x + 3 + i * 2, sy, 16 - i * 2, 3, "#6e4630");
+      rect(ctx, x + 3 + i * 2, sy, 16 - i * 2, 1, "#9b6844");
+    }
+    // Light spilling down from upstairs, and a little lantern.
+    const flick = calm ? 0 : Math.sin(time * 4.3) * 0.03 + Math.sin(time * 7.1) * 0.02;
+    ctx.fillStyle = `rgba(255, 204, 130, ${0.18 + flick})`;
+    ctx.fillRect(x + 3, y + 4, 16, 18);
+    rect(ctx, x + 8, y + 4, 1, 4, "#4a2e20");
+    rect(ctx, x + 7, y + 8, 3, 3, "#f2c14e");
+    rect(ctx, x + 8, y + 9, 1, 1, "#fff3c4");
+    // Now and then a tail swishes at the top of the stairs.
+    if (!calm) {
+      tailT -= dt;
+      if (tailT < -3) tailT = 7 + Math.random() * 6;
+      if (tailT < 0) {
+        const sw = Math.round(Math.sin(time * 3) * 2);
+        line(ctx, x + 14, y + 20, x + 15 + sw, y + 13, "#f0a050");
+        rect(ctx, x + 14 + sw, y + 12, 2, 2, "#c96a28");
+      }
+    }
+    // Threshold and a paw-print sign above.
+    rect(ctx, x, FLOOR_Y - 1, 22, 1, "#5e3b28");
+    rect(ctx, x + 6, y - 7, 10, 6, "#f2e6d0");
+    rect(ctx, x + 6, y - 2, 10, 1, "#cbbca2");
+    for (const [dx, dy] of [[10, -4], [9, -6], [12, -6], [8, -5], [13, -5]]) rect(ctx, x + dx, y + dy, 1, 1, "#c47c7c");
+    rect(ctx, x + 10, y - 4, 2, 2, "#c47c7c");
   }
 
   // ------------------------------------------------------------ effects
@@ -903,6 +1156,7 @@ const Scene = (() => {
     syncCustomers(state, walkDt);
     syncStray(state, walkDt);
     updateWalkers(walkDt);
+    updateStaff(walkDt);
 
     ctx.clearRect(0, 0, W, H);
     drawSky();
@@ -914,6 +1168,7 @@ const Scene = (() => {
     drawVines(171, 18, 2, 5, 0);
     drawVines(302, 31, 4, 8, 2);
     if (state.upgrades.capacity) drawSecondBed();
+    if (state.upgrades.loft) drawLoft(dt);
     drawSunbeam();
 
     // Everything standing on the floor, back to front.
@@ -927,6 +1182,10 @@ const Scene = (() => {
       things.push({ y: 75, draw: () => drawTable(seat, c, c && custVis.get(c.id)) });
     });
     things.push({ y: BOWL.y, draw: () => drawBowl(state) });
+    state.decor.forEach((kind, i) => {
+      if (kind) things.push({ y: SLOTS[i].y, draw: () => drawDecor(ctx, kind, SLOTS[i].x, SLOTS[i].y, time) });
+    });
+    if (state.upgrades.staff) things.push({ y: staffPos().y, draw: drawStaff });
     for (const cat of state.cats) things.push({ y: cat.y / LP, draw: () => drawCat(cat) });
     for (const [, v] of custVis) if (!v.seated) things.push({ y: WALK_Y, draw: () => drawWalker(v.look, v.x, WALK_Y) });
     for (const w of walkers) {
@@ -942,6 +1201,7 @@ const Scene = (() => {
     things.push({ y: 199, draw: drawFloorPlant });
     things.sort((a, b) => a.y - b.y);
     for (const t of things) t.draw();
+    if (view.placing) drawSlotMarkers(state, view);
 
     // Overlays: progress bars, bubbles, name tags, effects.
     for (const c of state.customers) {
@@ -952,11 +1212,22 @@ const Scene = (() => {
     drawParticles(dt);
   }
 
+  // A page point in art pixels.
+  function toArt(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
+  }
+
+  // Which free decoration spot (if any) is under a page point.
+  function slotAt(state, clientX, clientY) {
+    const { x, y } = toArt(clientX, clientY);
+    const i = SLOTS.findIndex((s, k) => !state.decor[k] && Math.abs(x - s.x) <= 14 && y >= s.y - 30 && y <= s.y + 5);
+    return i === -1 ? null : i;
+  }
+
   // Which cat (if any) is under a page point. Front-most wins.
   function catAt(state, clientX, clientY) {
-    const r = canvas.getBoundingClientRect();
-    const x = ((clientX - r.left) / r.width) * W;
-    const y = ((clientY - r.top) / r.height) * H;
+    const { x, y } = toArt(clientX, clientY);
     const sorted = [...state.cats].sort((a, b) => b.y - a.y);
     for (const cat of sorted) {
       const b = catBox(cat);
@@ -987,10 +1258,35 @@ const Scene = (() => {
   function upgrade(id) {
     if (id === "seats") {
       burst("sparkle", SEATS[2].x, 58, 10, 16);
-    } else {
+    } else if (id === "capacity") {
       burst("sparkle", 262, 180, 10, 16);
       burst("heartSmall", 262, 176, 4, 8);
+    } else if (id === "loft") {
+      burst("sparkle", LOFT.x + 11, 50, 12, 18);
+      burst("heartSmall", LOFT.x + 11, 40, 4, 8);
+    } else if (id === "matcha") {
+      burst("sparkle", 125, 30, 8, 12);
+    } else if (id === "staff") {
+      burst("sparkle", STAFF_HOME.x, STAFF_HOME.y - 12, 10, 14);
+      burst("heartSmall", STAFF_HOME.x, STAFF_HOME.y - 20, 3, 8);
     }
+  }
+
+  function placed(kind, slot) {
+    const s = SLOTS[slot];
+    burst("sparkle", s.x, s.y - 8, 10, 16);
+  }
+
+  // The staff member walks to the bowl (the refill already happened).
+  function staffRefill() {
+    if (!staffTrip) staffTrip = { phase: "go", x: STAFF_HOME.x, y: STAFF_HOME.y, t: 0 };
+  }
+
+  // A decoration drawn into a small canvas, for the decorations panel.
+  function decorPreview(el, kind) {
+    const g = el.getContext("2d");
+    g.clearRect(0, 0, el.width, el.height);
+    drawDecor(g, kind, Math.floor(el.width / 2), el.height - 3, 0, false);
   }
 
   // Draw a cat's sitting portrait into a small canvas (for the panels).
@@ -1004,5 +1300,5 @@ const Scene = (() => {
     g.drawImage(img, Math.floor((el.width - img.width) / 2), el.height - img.height - 1);
   }
 
-  return { init, setScale, render, catAt, petCat, payment, refill, upgrade, portrait, W, H };
+  return { init, setScale, render, catAt, slotAt, petCat, payment, refill, upgrade, placed, staffRefill, decorPreview, portrait, W, H };
 })();

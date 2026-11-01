@@ -29,6 +29,9 @@
           <button id="book-btn" class="btn btn-tool" title="Cat book" aria-label="Cat book">
             <img class="icon" data-icon="book" alt="" />
           </button>
+          <button id="decor-btn" class="btn btn-tool" title="Decorate" aria-label="Decorate">
+            <img class="icon" data-icon="plant" alt="" />
+          </button>
           <button id="upgrades-btn" class="btn btn-tool" title="Upgrades" aria-label="Upgrades">
             <img class="icon" data-icon="shop" alt="" />
           </button>
@@ -47,6 +50,10 @@
     <div id="stage">
       <canvas id="shop" aria-label="The café: cats wander, customers sit at the tables, and strays arrive at the door"></canvas>
       <div id="message" role="status" aria-live="polite"></div>
+      <div id="place-bar" class="box paper place-bar" hidden>
+        <span id="place-text"></span>
+        <button id="place-cancel" class="btn btn-sage">Cancel</button>
+      </div>
     </div>
 
     <section id="tray">
@@ -77,6 +84,11 @@
               <span id="info-bar" class="bar"><span id="info-fill" class="bar-fill"></span></span>
               <span id="info-value" class="fullness-value"></span>
             </div>
+            <div class="fullness affection">
+              <span class="fullness-label">Affection</span>
+              <span id="info-hearts" class="hearts"></span>
+              <span id="info-affection" class="fullness-value"></span>
+            </div>
           </div>
           <button id="info-close" class="btn btn-icon" aria-label="Close"><img class="icon icon-sm" data-icon="close" alt="" /></button>
         </div>
@@ -90,8 +102,17 @@
       <h2 id="upgrades-title">Upgrades</h2>
       <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
     </div>
-    <p class="dialog-sub">Spend coins to make room for more visitors and more cats. Each upgrade is bought once.</p>
+    <p class="dialog-sub">Spend coins to grow the café. Each upgrade is bought once.</p>
     <ul id="upgrade-list" class="upgrade-list"></ul>
+  </dialog>
+
+  <dialog id="decor-dialog" class="dialog paper" aria-labelledby="decor-title">
+    <div class="dialog-head">
+      <h2 id="decor-title">Decorate</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p id="decor-sub" class="dialog-sub"></p>
+    <ul id="decor-list" class="decor-list"></ul>
   </dialog>
 
   <dialog id="book-dialog" class="dialog paper" aria-labelledby="book-title">
@@ -119,6 +140,8 @@
   <script src="customers.js"></script>
   <script src="strays.js"></script>
   <script src="upgrades.js"></script>
+  <script src="decor.js"></script>
+  <script src="staff.js"></script>
   <script src="save.js"></script>
   <script src="offline.js"></script>
   <script src="sprites.js"></script>
