@@ -1,7 +1,8 @@
 // ui.js — everything around the canvas: header, buttons, the door and cat
-// panels, messages, and mouse handling. Each frame it hands the state to
-// Scene (scene.js), which draws the room.
-// Game logic stays in cats.js / customers.js / strays.js; this file only reads state.
+// panels, the upgrades and cat book dialogs, messages, and mouse handling.
+// Each frame it hands the state to Scene (scene.js), which draws the room.
+// Game logic stays in cats.js / customers.js / strays.js / upgrades.js;
+// this file only reads state and calls the handlers main.js passes in.
 
 const UI = (() => {
   const els = {};
@@ -13,6 +14,7 @@ const UI = (() => {
   let clock = 0;               // real seconds, for portrait animation
   let shownCoins = null;       // number shown in the header, eases toward state.coins
   let lastCoins = null;
+  const upgradeRows = {};      // upgrade id -> { button, note }
 
   const STATUS = { walk: "Strolling", idle: "Taking a break", sleep: "Napping" };
 
@@ -29,6 +31,21 @@ const UI = (() => {
     el.classList.remove(cls);
     void el.offsetWidth;
     el.classList.add(cls);
+  }
+
+  function make(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  // Icons are sized in art pixels (CSS reads --w/--h), so they stay crisp.
+  function setIcon(img, name) {
+    const icon = Sprites.icon(name);
+    img.src = Sprites.iconDataURL(name);
+    img.style.setProperty("--w", icon.width);
+    img.style.setProperty("--h", icon.height);
   }
 
   // Largest whole-number scale that fits the window, so pixels stay square.
@@ -53,32 +70,116 @@ const UI = (() => {
     document.body.style.backgroundImage = `url(${c.toDataURL()})`;
   }
 
-  function init(handlers) {
+  // ---------- dialogs ----------
+  function openDialog(dialog) {
+    Sound.play("tap");
+    if (dialog === els["book-dialog"]) buildBook(current);
+    if (!dialog.open) dialog.showModal();
+    renderUpgrades(current);
+  }
+
+  function buildUpgrades(handlers) {
+    const list = byId("upgrade-list");
+    for (const up of Upgrades.LIST) {
+      const row = make("li", "upgrade");
+      const body = make("div", "upgrade-body");
+      body.append(make("p", "upgrade-name", up.name), make("p", "upgrade-text", up.text));
+      const price = make("span", "price");
+      const coin = make("img", "icon");
+      coin.alt = "";
+      setIcon(coin, "coin");
+      price.append(coin, String(Upgrades.cost(up.id)));
+      const side = make("div", "upgrade-side");
+      const button = make("button", "btn btn-honey", "Buy");
+      button.addEventListener("click", () => handlers.onBuy(up.id));
+      const note = make("p", "upgrade-note");
+      side.append(price, button, note);
+      row.append(body, side);
+      list.append(row);
+      upgradeRows[up.id] = { button, note };
+    }
+  }
+
+  function renderUpgrades(state) {
+    if (!els["upgrades-dialog"].open) return;
+    for (const up of Upgrades.LIST) {
+      const { button, note } = upgradeRows[up.id];
+      const owned = Upgrades.owned(state, up.id);
+      const short = Upgrades.cost(up.id) - state.coins;
+      setText(button, owned ? "Owned" : "Buy");
+      button.disabled = !Upgrades.canBuy(state, up.id);
+      setText(note, owned ? "" : short > 0 ? `${short} more coins needed` : "");
+    }
+  }
+
+  function buildBook(state) {
+    const grid = byId("book-grid");
+    grid.replaceChildren();
+    const roster = CONFIG.CAT_ROSTER;
+    const met = roster.filter((c) => state.book.includes(c.name)).length;
+    setText(byId("book-count"), `${met} of ${roster.length} cats adopted`);
+    for (const entry of roster) {
+      const known = state.book.includes(entry.name);
+      const card = make("li", known ? "book-card" : "book-card locked");
+      const pic = make("canvas", "portrait");
+      pic.width = 20;
+      pic.height = 17;
+      Scene.portrait(pic, known ? entry.look : null, 0);
+      const name = make("p", "book-name", known ? entry.name : "???");
+      const look = make("p", "book-look", known ? CONFIG.CAT_LOOKS[entry.look].label : "Not adopted yet");
+      const about = make("p", "book-about", known ? entry.about : "Maybe they'll stop by the door one evening.");
+      card.append(pic, name, look, about);
+      grid.append(card);
+    }
+  }
+
+  // ---------- setup ----------
+  function init(handlers, state) {
+    current = state;
     for (const id of ["coins", "cat-count", "stat-coins", "refill", "shop", "message", "info", "info-name", "info-meta",
       "info-value", "info-bar", "info-fill", "info-hungry", "info-portrait", "info-empty", "stray-panel", "stray-text",
-      "stray-meta", "stray-full", "stray-portrait", "stray-empty", "adopt"]) {
+      "stray-meta", "stray-full", "stray-portrait", "stray-empty", "adopt", "mute-btn", "mute-icon",
+      "upgrades-dialog", "book-dialog"]) {
       els[id] = byId(id);
     }
 
-    // Icons are sized in art pixels (CSS reads --w/--h), so they stay crisp.
-    for (const img of document.querySelectorAll("img[data-icon]")) {
-      const icon = Sprites.icon(img.dataset.icon);
-      img.src = Sprites.iconDataURL(img.dataset.icon);
-      img.style.setProperty("--w", icon.width);
-      img.style.setProperty("--h", icon.height);
-    }
+    for (const img of document.querySelectorAll("img[data-icon]")) setIcon(img, img.dataset.icon);
     starryBackground();
 
     Scene.init(els.shop);
     fitScale();
     window.addEventListener("resize", fitScale);
 
+    // Audio can only start after the player interacts with the page.
+    Sound.setMuted(state.muted);
+    const unlock = () => Sound.unlock();
+    document.addEventListener("pointerdown", unlock, { once: true });
+    document.addEventListener("keydown", unlock, { once: true });
+
     els.refill.addEventListener("click", handlers.onRefill);
     els.adopt.addEventListener("click", handlers.onAdopt);
-    byId("turn-away").addEventListener("click", handlers.onTurnAway);
+    byId("turn-away").addEventListener("click", () => {
+      Sound.play("tap");
+      handlers.onTurnAway();
+    });
     byId("info-close").addEventListener("click", () => (selectedCatId = null));
+    els["mute-btn"].addEventListener("click", () => {
+      handlers.onToggleSound();
+      Sound.play("tap");
+    });
+    byId("upgrades-btn").addEventListener("click", () => openDialog(els["upgrades-dialog"]));
+    byId("book-btn").addEventListener("click", () => openDialog(els["book-dialog"]));
+    for (const dialog of [els["upgrades-dialog"], els["book-dialog"]]) {
+      dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+      // Clicking the dimmed area outside the dialog closes it.
+      dialog.addEventListener("click", (e) => {
+        if (e.target === dialog) dialog.close();
+      });
+    }
+    buildUpgrades(handlers);
+
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") selectedCatId = null;
+      if (e.key === "Escape" && !document.querySelector("dialog[open]")) selectedCatId = null;
     });
 
     els.shop.addEventListener("click", (e) => {
@@ -86,6 +187,7 @@ const UI = (() => {
       if (id == null) return;
       selectedCatId = id;
       Scene.petCat(current.cats.find((c) => c.id === id));
+      Sound.meow(id);
     });
     els.shop.addEventListener("mousemove", (e) => {
       hoverCatId = current && Scene.catAt(current, e.clientX, e.clientY);
@@ -94,19 +196,34 @@ const UI = (() => {
     els.shop.addEventListener("mouseleave", () => (hoverCatId = null));
   }
 
-  function showMessage(text) {
+  // ---------- feedback ----------
+  function toast(text) {
     els.message.textContent = text;
     restartAnimation(els.message, "visible");
     clearTimeout(messageTimeout);
     messageTimeout = setTimeout(() => els.message.classList.remove("visible"), 2000);
   }
 
+  // Something the player tried didn't work ("Not enough coins", "The café is full").
+  function showMessage(text) {
+    toast(text);
+    Sound.play("nope");
+  }
+
   function showPayment(customer, amount) {
     Scene.payment(customer, amount);
+    Sound.play("coin");
   }
 
   function showRefill(state) {
     Scene.refill(state);
+    Sound.play("refill");
+  }
+
+  function showUpgrade(id) {
+    Scene.upgrade(id);
+    Sound.play("upgrade");
+    toast(id === "seats" ? "Third table added" : `Room for ${CONFIG.UPGRADES.capacity.maxCats} cats now`);
   }
 
   // ---------- header ----------
@@ -119,8 +236,16 @@ const UI = (() => {
     const diff = state.coins - shownCoins;
     if (diff !== 0) shownCoins += Math.sign(diff) * Math.min(Math.abs(diff), Math.max(1, Math.ceil(Math.abs(diff) * dt * 6)));
     setText(els.coins, String(shownCoins));
-    setText(els["cat-count"], `${state.cats.length}/${CONFIG.MAX_CATS}`);
+    setText(els["cat-count"], `${state.cats.length}/${state.maxCats}`);
     els.refill.classList.toggle("short", state.coins < CONFIG.FOOD_COST);
+
+    const label = state.muted ? "Turn sound on" : "Mute sound";
+    if (els["mute-btn"].getAttribute("aria-label") !== label) {
+      els["mute-btn"].setAttribute("aria-label", label);
+      els["mute-btn"].title = label;
+      els["mute-btn"].setAttribute("aria-pressed", String(state.muted));
+      setIcon(els["mute-icon"], state.muted ? "soundOff" : "soundOn");
+    }
   }
 
   // ---------- the door ----------
@@ -167,7 +292,8 @@ const UI = (() => {
     renderHud(state, dt);
     renderStray(state);
     renderInfo(state);
+    renderUpgrades(state);
   }
 
-  return { init, render, showMessage, showPayment, showRefill };
+  return { init, render, showMessage, showPayment, showRefill, showUpgrade };
 })();

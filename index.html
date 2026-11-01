@@ -24,11 +24,24 @@
           <img class="icon" data-icon="catHead" alt="Cats" /><span id="cat-count">0/3</span>
         </span>
       </div>
-      <button id="refill" class="btn btn-honey">
-        <img class="icon icon-wide" data-icon="bowlFull" alt="" />
-        <span>Refill food</span>
-        <span class="price"><img class="icon icon-sm" data-icon="coin" alt="" />10</span>
-      </button>
+      <div class="actions">
+        <div class="tools">
+          <button id="book-btn" class="btn btn-tool" title="Cat book" aria-label="Cat book">
+            <img class="icon" data-icon="book" alt="" />
+          </button>
+          <button id="upgrades-btn" class="btn btn-tool" title="Upgrades" aria-label="Upgrades">
+            <img class="icon" data-icon="shop" alt="" />
+          </button>
+          <button id="mute-btn" class="btn btn-tool" title="Mute sound" aria-label="Mute sound" aria-pressed="false">
+            <img id="mute-icon" class="icon" data-icon="soundOn" alt="" />
+          </button>
+        </div>
+        <button id="refill" class="btn btn-honey">
+          <img class="icon" data-icon="bowlFull" alt="" />
+          <span>Refill food</span>
+          <span class="price"><img class="icon" data-icon="coin" alt="" />10</span>
+        </button>
+      </div>
     </header>
 
     <div id="stage">
@@ -72,11 +85,32 @@
     </section>
   </main>
 
+  <dialog id="upgrades-dialog" class="dialog paper" aria-labelledby="upgrades-title">
+    <div class="dialog-head">
+      <h2 id="upgrades-title">Upgrades</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p class="dialog-sub">Spend coins to make room for more visitors and more cats. Each upgrade is bought once.</p>
+    <ul id="upgrade-list" class="upgrade-list"></ul>
+  </dialog>
+
+  <dialog id="book-dialog" class="dialog paper" aria-labelledby="book-title">
+    <div class="dialog-head">
+      <h2 id="book-title">Cat book</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p id="book-count" class="dialog-sub"></p>
+    <ul id="book-grid" class="book-grid"></ul>
+  </dialog>
+
   <script src="config.js"></script>
   <script src="cats.js"></script>
   <script src="customers.js"></script>
   <script src="strays.js"></script>
+  <script src="upgrades.js"></script>
+  <script src="save.js"></script>
   <script src="sprites.js"></script>
+  <script src="sound.js"></script>
   <script src="scene.js"></script>
   <script src="ui.js"></script>
   <script src="main.js"></script>

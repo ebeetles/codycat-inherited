@@ -40,8 +40,8 @@ const Customers = (() => {
   // onPaid(customer, amount) lets the UI show a "+25" effect.
   function update(state, dt, onPaid) {
     state.customerSpawnTimer += dt;
-    while (state.customerSpawnTimer >= CONFIG.CUSTOMER_SPAWN_SECONDS) {
-      state.customerSpawnTimer -= CONFIG.CUSTOMER_SPAWN_SECONDS;
+    while (state.customerSpawnTimer >= state.customerSpawnSeconds) {
+      state.customerSpawnTimer -= state.customerSpawnSeconds;
       trySpawn(state);
     }
 

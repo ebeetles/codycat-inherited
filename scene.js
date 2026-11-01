@@ -16,6 +16,7 @@ const Scene = (() => {
   const SEATS = CONFIG.SEAT_POSITIONS.map((p) => ({ x: Math.round(p.x / LP), y: Math.round(p.y / LP) }));
   const BOWL = { x: Math.round(CONFIG.BOWL_POS.x / LP), y: Math.round(CONFIG.BOWL_POS.y / LP) };
   const STRAY = { x: Math.round(CONFIG.STRAY_POS.x / LP), y: Math.round(CONFIG.STRAY_POS.y / LP) };
+  const CLOCK = { x: 226, y: 30 };
   const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let canvas, ctx;
@@ -267,28 +268,32 @@ const Scene = (() => {
     rect(g, 170, 13, 7, 1, "#de8a5c");
 
     // Chalkboard menu with doodles.
-    rect(g, 185, 13, 25, 26, "#8a5a3c");
-    rect(g, 187, 15, 21, 22, "#3d4a43");
-    rect(g, 189, 17, 17, 1, "#e9efe6");
-    for (const [y, w] of [[21, 12], [24, 9], [27, 13]]) {
-      rect(g, 189, y, 2, 1, "#f2dc8a");
-      rect(g, 192, y, w - 3, 1, "#c9d3c6");
+    rect(g, 182, 13, 17, 26, "#8a5a3c");
+    rect(g, 184, 15, 13, 22, "#3d4a43");
+    rect(g, 186, 17, 9, 1, "#e9efe6");
+    for (const [y, w] of [[20, 8], [23, 6], [26, 9]]) {
+      rect(g, 186, y, 1, 1, "#f2dc8a");
+      rect(g, 188, y, w - 2, 1, "#c9d3c6");
     }
-    rect(g, 190, 31, 5, 3, "#e9efe6");
-    rect(g, 195, 32, 1, 1, "#e9efe6");
-    rect(g, 191, 30, 1, 1, "#c9d3c6");
-    rect(g, 193, 29, 1, 1, "#c9d3c6");
-    for (const [x, y] of [[199, 30], [203, 30], [199, 31], [200, 31], [201, 31], [202, 31], [203, 31], [199, 32], [203, 32], [200, 33], [201, 33], [202, 33]]) {
+    rect(g, 186, 31, 4, 3, "#e9efe6");
+    rect(g, 190, 32, 1, 1, "#e9efe6");
+    rect(g, 187, 29, 1, 1, "#c9d3c6");
+    for (const [x, y] of [[192, 30], [194, 30], [192, 31], [193, 31], [194, 31], [192, 32], [194, 32], [193, 33]]) {
       rect(g, x, y, 1, 1, "#f2b6b6");
     }
-    rect(g, 200, 32, 1, 1, "#3d4a43");
-    rect(g, 202, 32, 1, 1, "#3d4a43");
 
     // Clock face (hands are live).
-    ellipse(g, 252, 30, 8, 8, "#5e3b28");
-    ellipse(g, 252, 30, 7, 7, "#7d4f33");
-    ellipse(g, 252, 30, 6, 6, "#f6ead2");
-    for (const [dx, dy] of [[0, -5], [5, 0], [0, 5], [-5, 0]]) rect(g, 252 + dx, 30 + dy, 1, 1, "#5e3b28");
+    ellipse(g, CLOCK.x, CLOCK.y, 8, 8, "#5e3b28");
+    ellipse(g, CLOCK.x, CLOCK.y, 7, 7, "#7d4f33");
+    ellipse(g, CLOCK.x, CLOCK.y, 6, 6, "#f6ead2");
+    for (const [dx, dy] of [[0, -5], [5, 0], [0, 5], [-5, 0]]) rect(g, CLOCK.x + dx, CLOCK.y + dy, 1, 1, "#5e3b28");
+
+    // Framed portrait of Cream.
+    rect(g, 259, 21, 15, 16, "#8a5a3c");
+    rect(g, 259, 21, 15, 1, "#a8714a");
+    rect(g, 261, 23, 11, 12, "#f2e6d0");
+    rect(g, 261, 32, 11, 3, "#e9d1a3");
+    g.drawImage(Sprites.icon("catHead"), 262, 25);
 
     // Pendant lamps over the tables.
     for (const s of SEATS) {
@@ -406,9 +411,10 @@ const Scene = (() => {
     const m = now.getMinutes() + now.getSeconds() / 60;
     const h = (now.getHours() % 12) + m / 60;
     const a1 = (m / 60) * Math.PI * 2, a2 = (h / 12) * Math.PI * 2;
-    line(ctx, 252, 30, 252 + Math.sin(a1) * 5, 30 - Math.cos(a1) * 5, "#3d261b");
-    line(ctx, 252, 30, 252 + Math.sin(a2) * 3, 30 - Math.cos(a2) * 3, "#c8574d");
-    rect(ctx, 252, 30, 1, 1, "#3d261b");
+    const { x, y } = CLOCK;
+    line(ctx, x, y, x + Math.sin(a1) * 5, y - Math.cos(a1) * 5, "#3d261b");
+    line(ctx, x, y, x + Math.sin(a2) * 3, y - Math.cos(a2) * 3, "#c8574d");
+    rect(ctx, x, y, 1, 1, "#3d261b");
   }
 
   function drawDoor() {
@@ -612,6 +618,32 @@ const Scene = (() => {
     }
   }
 
+  // Holds the third table's spot until the seating upgrade is bought.
+  function drawFern(x) {
+    const s = (i) => (calm ? 0 : Math.round(Math.sin(time * 0.9 + i) * 0.8));
+    const fronds = [[-9, 52], [-6, 47], [-1, 45], [4, 46], [8, 50], [10, 56], [-11, 58]];
+    fronds.forEach(([dx, top], i) => {
+      line(ctx, x, 64, x + dx + s(i), top, "#4f7d4a");
+      for (let k = 0; k < 4; k++) {
+        const t = (k + 1) / 5;
+        const px = Math.round(x + (dx + s(i)) * t), py = Math.round(64 + (top - 64) * t);
+        rect(ctx, px - 1, py, 3, 1, k % 2 ? "#6d9b62" : "#8cc28a");
+      }
+    });
+    rect(ctx, x - 5, 64, 11, 9, "#c2683f");
+    rect(ctx, x - 6, 63, 13, 2, "#de8a5c");
+    rect(ctx, x - 5, 72, 11, 1, "#9e4f2e");
+    shadow(x, 74, 6);
+  }
+
+  // The second cat bed that comes with the capacity upgrade.
+  function drawSecondBed() {
+    ellipse(ctx, 262, 185, 14, 6, "#a8524a");
+    ellipse(ctx, 262, 184, 14, 5, "#d9776a");
+    ellipse(ctx, 262, 184, 10, 3, "#f6e1bd");
+    ellipse(ctx, 262, 185, 8, 1, "#e9cfa2");
+  }
+
   function drawStayBar(seat, customer) {
     const x = seat.x - 7, y = 41;
     const pct = Math.min(1, customer.elapsed / CONFIG.CUSTOMER_STAY_SECONDS);
@@ -717,7 +749,16 @@ const Scene = (() => {
   }
 
   // ------------------------------------------------------------ bookkeeping
-  function updateAmbient(dt) {
+  let meowT = 30;
+
+  function updateAmbient(dt, state) {
+    // Now and then a cat meows on its own.
+    meowT -= dt;
+    if (meowT <= 0 && state.cats.length) {
+      meowT = 40 + Math.random() * 50;
+      const cat = state.cats[Math.floor(Math.random() * state.cats.length)];
+      if (cat.mode !== "sleep") Sound.meow(cat.id);
+    }
     if (!calm) {
       for (const c of clouds) {
         c.x += dt * 1.6 * (c.w / 10);
@@ -745,7 +786,10 @@ const Scene = (() => {
 
   function nearDoor(x) {
     if (Math.abs(x - DOOR_X) < 12) {
-      if (doorOpen <= 0) bell = 1;
+      if (doorOpen <= 0) {
+        bell = 1;
+        Sound.play("bell");
+      }
       doorOpen = 0.5;
     }
   }
@@ -777,10 +821,12 @@ const Scene = (() => {
     const s = state.stray;
     if (s && (!strayVis || strayVis.id !== s.id)) {
       strayVis = { id: s.id, look: s.look, x: DOOR_X, arrived: false };
+      Sound.meow(s.id);
     }
     if (strayVis && (!s || s.id !== strayVis.id)) {
       const adopted = state.cats.find((c) => c.id === strayVis.id);
       if (adopted) {
+        Sound.play("adopt");
         burst("heart", Math.round(adopted.x / LP), Math.round(adopted.y / LP) - 16, 5, 10);
         burst("sparkle", Math.round(adopted.x / LP), Math.round(adopted.y / LP) - 8, 6, 14);
       } else {
@@ -850,7 +896,7 @@ const Scene = (() => {
   function render(state, dt, view) {
     time += dt;
     frameDt = dt;
-    updateAmbient(dt);
+    updateAmbient(dt, state);
     // Walking to and from the door runs on game time, like the cats, so it
     // keeps pace with ?speed= test mode.
     const walkDt = dt * CONFIG.SPEED;
@@ -867,11 +913,16 @@ const Scene = (() => {
     drawDoor();
     drawVines(171, 18, 2, 5, 0);
     drawVines(302, 31, 4, 8, 2);
+    if (state.upgrades.capacity) drawSecondBed();
     drawSunbeam();
 
     // Everything standing on the floor, back to front.
     const things = [];
     SEATS.forEach((seat, i) => {
+      if (i >= state.seats.length) {
+        things.push({ y: 75, draw: () => drawFern(seat.x) });
+        return;
+      }
       const c = state.customers.find((k) => k.seat === i);
       things.push({ y: 75, draw: () => drawTable(seat, c, c && custVis.get(c.id)) });
     });
@@ -932,15 +983,26 @@ const Scene = (() => {
     }
   }
 
+  // Sparkles where a bought upgrade appears.
+  function upgrade(id) {
+    if (id === "seats") {
+      burst("sparkle", SEATS[2].x, 58, 10, 16);
+    } else {
+      burst("sparkle", 262, 180, 10, 16);
+      burst("heartSmall", 262, 176, 4, 8);
+    }
+  }
+
   // Draw a cat's sitting portrait into a small canvas (for the panels).
+  // look null draws a locked silhouette.
   function portrait(el, look, t) {
     const g = el.getContext("2d");
     g.clearRect(0, 0, el.width, el.height);
-    const tt = t * 0.8 + look.length;
+    const tt = t * 0.8 + (look || "").length;
     const frame = (Math.floor(tt / 1.5) % 2 ? "sitTail" : "sit") + (tt % 3.7 < 0.14 ? "Blink" : "");
-    const img = Sprites.cat(look, frame, 1);
+    const img = look ? Sprites.cat(look, frame, 1) : Sprites.silhouette("sit");
     g.drawImage(img, Math.floor((el.width - img.width) / 2), el.height - img.height - 1);
   }
 
-  return { init, setScale, render, catAt, petCat, payment, refill, portrait, W, H };
+  return { init, setScale, render, catAt, petCat, payment, refill, upgrade, portrait, W, H };
 })();

@@ -117,7 +117,7 @@ h1 {
   margin: 0;
   font-family: var(--display);
   font-weight: 400;
-  font-size: calc(15px * var(--s));
+  font-size: calc(13px * var(--s));
   line-height: 0.9;
   letter-spacing: 0.02em;
   color: var(--cream);
@@ -211,7 +211,7 @@ h1 {
   align-self: start;
 }
 
-#refill .price {
+.price {
   display: inline-flex;
   align-items: center;
   gap: var(--px);
@@ -222,6 +222,103 @@ h1 {
   line-height: 1;
 }
 #refill.short .price { background: var(--rose); color: var(--cream); }
+
+.actions, .tools {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+}
+.actions { gap: calc(3 * var(--px)); }
+.btn-tool {
+  padding: calc(2 * var(--px)) calc(2 * var(--px)) calc(3 * var(--px));
+  background: var(--parchment);
+  box-shadow: inset 0 var(--px) 0 var(--paper-light), inset 0 calc(-2 * var(--px)) 0 var(--parchment-shade);
+}
+.btn-tool .icon { width: calc(8 * var(--px)); height: calc(8 * var(--px)); object-fit: contain; object-position: center; }
+.btn-tool[aria-pressed="true"] { background: var(--parchment-shade); }
+.btn-tool:focus-visible { box-shadow: inset 0 0 0 var(--px) var(--cream), inset 0 0 0 calc(2 * var(--px)) var(--ink); }
+
+/* ---------- dialogs: upgrades, cat book ---------- */
+.dialog {
+  width: min(calc(220 * var(--px)), calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: calc(5 * var(--px)) calc(6 * var(--px)) calc(6 * var(--px));
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--text);
+  clip-path: polygon(
+    0 var(--px), var(--px) var(--px), var(--px) 0,
+    calc(100% - var(--px)) 0, calc(100% - var(--px)) var(--px), 100% var(--px),
+    100% calc(100% - var(--px)), calc(100% - var(--px)) calc(100% - var(--px)), calc(100% - var(--px)) 100%,
+    var(--px) 100%, var(--px) calc(100% - var(--px)), 0 calc(100% - var(--px))
+  );
+}
+#book-dialog { width: min(calc(300 * var(--px)), calc(100vw - 32px)); }
+.dialog[open] { animation: rise 0.25s steps(3); }
+.dialog::backdrop { background: rgba(35, 28, 46, 0.62); }
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(4 * var(--px));
+}
+.dialog h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(13px * var(--s));
+  line-height: 1;
+}
+.dialog-sub {
+  margin: calc(1 * var(--px)) 0 calc(4 * var(--px));
+  font-size: var(--text-sm);
+  color: var(--walnut-mid);
+}
+.upgrade-list, .book-grid { list-style: none; margin: 0; padding: 0; }
+.upgrade-list { display: grid; gap: calc(3 * var(--px)); }
+.upgrade {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(4 * var(--px));
+  padding: calc(3 * var(--px)) calc(4 * var(--px));
+  background: var(--paper-light);
+  border: var(--px) solid var(--parchment-shade);
+}
+.upgrade-name { font-weight: 700; }
+.upgrade-text { font-size: var(--text-sm); color: var(--walnut-mid); }
+.upgrade-side {
+  display: grid;
+  justify-items: end;
+  gap: var(--px);
+  flex: none;
+}
+.upgrade-side .btn { min-width: calc(26 * var(--px)); justify-content: center; }
+.upgrade-note { font-size: var(--text-sm); color: var(--rose-dark); min-height: 1em; }
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: calc(3 * var(--px));
+}
+.book-card {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--px);
+  padding: calc(3 * var(--px));
+  background: var(--paper-light);
+  border: var(--px) solid var(--parchment-shade);
+  text-align: center;
+}
+.book-card .portrait { margin-bottom: var(--px); }
+.book-name { font-family: var(--display); font-size: calc(10px * var(--s)); line-height: 1; }
+.book-look { font-size: var(--text-sm); font-weight: 600; color: var(--walnut-mid); }
+.book-about { font-size: var(--text-sm); line-height: 1.2; }
+.book-card.locked { background: var(--parchment-shade); }
+.book-card.locked .portrait { background: #d8c29a; }
+.book-card.locked .book-name, .book-card.locked .book-about { color: var(--walnut-mid); }
 
 /* ---------- the café ---------- */
 #stage {
@@ -394,6 +491,7 @@ h1 {
 
 @media (max-width: 720px) {
   #tray { grid-template-columns: 1fr; }
+  .book-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

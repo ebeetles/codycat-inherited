@@ -79,6 +79,10 @@ const Sprites = (() => {
     gray:   { o: "#363945", b: "#a7adb9", d: "#878e9c", t: "#8a909e", c: "#f1f2f5", p: "#f0a0a8", e: "#20222a", x: "#4f5462" },
     black:  { o: "#120f17", b: "#3b3544", d: "#2b2633", t: "#3b3544", c: "#f6f1e7", p: "#e88d9a", e: "#f2d24a", x: "#18141e" },
     white:  { o: "#7a6b62", b: "#fbf6ee", d: "#e3d9cb", t: "#fbf6ee", c: "#ffffff", p: "#f6a5b0", e: "#4a8fc9", x: "#a8968a" },
+    cream:  { o: "#7a5a3e", b: "#f6e1bd", d: "#e3c79c", t: "#e8b77a", c: "#fffaf0", p: "#f4a5a5", e: "#5a3a24", x: "#b08a64" },
+    blue:   { o: "#2f3644", b: "#7d8aa0", d: "#65718a", t: "#7d8aa0", c: "#93a0b5", p: "#c98a9a", e: "#9ed46e", x: "#4a5468" },
+    brown:  { o: "#3e2618", b: "#9a6a44", d: "#7c5232", t: "#5a3a24", c: "#ead6b4", p: "#e89a8a", e: "#2a1a10", x: "#5a3a24" },
+    tortie: { o: "#1e1712", b: "#3d2e27", d: "#2b211c", t: "#d9883e", c: "#e0a050", p: "#d98a8a", e: "#e8c84a", x: "#120e0b" },
   };
 
   // Side view, facing right. Legs are added per frame below.
@@ -178,6 +182,15 @@ const Sprites = (() => {
     sleep: () => CAT_SLEEP,
     sleepIn: () => CAT_SLEEP_IN,
   };
+
+  // A cat not met yet: one flat color, for locked collection-book entries.
+  function silhouette(frame) {
+    return cached(`cat:silhouette:${frame}`, () => {
+      const pal = {};
+      for (const k of "obdtcpex") pal[k] = "#4b3d63";
+      return fromGrid(CAT_FRAMES[frame](), pal);
+    });
+  }
 
   function cat(look, frame, facing = 1) {
     return cached(`cat:${look}:${frame}:${facing}`, () => {
@@ -315,6 +328,22 @@ const Sprites = (() => {
       rows: ["..............", "....kKkkKk....", "..okkKkkkKko..", ".okKkkkKkkKko.", "obbbbbbbbbbbbo", "obwbbbbbbbbbbo", ".obbbbbbbbbbo.", "..oooooooooo.."],
       pal: null,
     },
+    book: {
+      rows: ["oooooo.", "orrrrro", "orwwwro", "orrrrro", "orrprro", "orrrrro", "owwwwwo", "ooooooo"],
+      pal: { o: "#3d261b", r: "#c47c7c", w: "#fff4dc", p: "#f2b45a" },
+    },
+    shop: {
+      rows: [".oooooo.", "orwrwrwo", "orwrwrwo", ".oooooo.", ".owwwwo.", ".obbwgo.", ".obbwwo.", "oooooooo"],
+      pal: { o: "#3d261b", r: "#d9776a", w: "#fff4dc", b: "#a8714a", g: "#8fc1e3" },
+    },
+    soundOn: {
+      rows: ["...o..o.", "..oo...o", "oooo.o.o", "oooo.o.o", "oooo.o.o", "..oo...o", "...o..o."],
+      pal: { o: "#3d261b" },
+    },
+    soundOff: {
+      rows: ["...o....", "..oo....", "oooo.o.o", "oooo..o.", "oooo.o.o", "..oo....", "...o...."],
+      pal: { o: "#3d261b" },
+    },
     close: {
       rows: ["oo...oo", ".oo.oo.", "..ooo..", ".oo.oo.", "oo...oo"],
       pal: { o: "#3d261b" },
@@ -339,5 +368,5 @@ const Sprites = (() => {
     return cached(`url:${name}`, () => icon(name).toDataURL());
   }
 
-  return { cat, customer, customerLook, icon, iconDataURL, shade, makeCanvas, CAT_PALETTES };
+  return { cat, silhouette, customer, customerLook, icon, iconDataURL, shade, makeCanvas, CAT_PALETTES };
 })();

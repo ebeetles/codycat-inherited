@@ -40,6 +40,17 @@ const Cats = (() => {
     return cat;
   }
 
+  // Rebuild a cat from a save: same id, name, look and fullness, at a fresh
+  // spot in the room. Later ids continue after the highest restored one.
+  function restore(saved) {
+    const cat = create(saved.name, saved.look);
+    cat.id = saved.id;
+    cat.fullness = Math.max(0, Math.min(CONFIG.FULLNESS_MAX, saved.fullness));
+    cat.decayTimer = saved.decayTimer || 0;
+    nextId = Math.max(nextId, saved.id + 1);
+    return cat;
+  }
+
   // Pick the cat's next activity: 50% walk, 30% idle, 20% sleep.
   function chooseNextMode(cat) {
     const r = Math.random();
@@ -99,5 +110,5 @@ const Cats = (() => {
     return true;
   }
 
-  return { create, update, isHungry, refillAll };
+  return { create, restore, update, isHungry, refillAll };
 })();
