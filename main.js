@@ -1,6 +1,6 @@
 // main.js — creates the game state (or loads the saved one) and runs the main loop.
 // Load order (see index.html): config.js, cats.js, customers.js, strays.js,
-// upgrades.js, save.js, sprites.js, sound.js, scene.js, ui.js, main.js
+// upgrades.js, save.js, offline.js, sprites.js, sound.js, scene.js, ui.js, main.js
 
 function createInitialState(saved) {
   const state = {
@@ -34,7 +34,13 @@ function createInitialState(saved) {
 }
 
 if (CONFIG.RESET_SAVE) Save.clear(); // ?reset=1: start over
-const state = createInitialState(Save.load());
+const saved = Save.load();
+if (saved && CONFIG.AWAY_TEST) saved.savedAt = Date.now() - CONFIG.AWAY_TEST * 60000; // ?away=N
+const state = createInitialState(saved);
+// Coins for the time the game was closed. Saving right away moves the save
+// time to now, so a reload doesn't pay the same time again.
+const away = saved ? Offline.collect(state, saved.savedAt, Date.now()) : null;
+if (away && away.coins) Save.write(state);
 if (CONFIG.STRAY_TEST) Strays.spawn(state); // ?stray=1: first stray right away
 
 UI.init({
@@ -61,6 +67,7 @@ UI.init({
     Save.write(state);
   },
 }, state);
+if (away && away.coins) UI.showAway(state, away);
 
 // Save every few seconds, and whenever the page is hidden or closed.
 setInterval(() => Save.write(state), CONFIG.SAVE_EVERY_SECONDS * 1000);

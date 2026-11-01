@@ -1,7 +1,7 @@
 // ui.js — everything around the canvas: header, buttons, the door and cat
-// panels, the upgrades and cat book dialogs, messages, and mouse handling.
+// panels, the upgrades, cat book and welcome-back dialogs, messages, and mouse handling.
 // Each frame it hands the state to Scene (scene.js), which draws the room.
-// Game logic stays in cats.js / customers.js / strays.js / upgrades.js;
+// Game logic stays in cats.js / customers.js / strays.js / upgrades.js / offline.js;
 // this file only reads state and calls the handlers main.js passes in.
 
 const UI = (() => {
@@ -14,6 +14,7 @@ const UI = (() => {
   let clock = 0;               // real seconds, for portrait animation
   let shownCoins = null;       // number shown in the header, eases toward state.coins
   let lastCoins = null;
+  let holdCoins = false;       // keep the header still until offline coins are collected
   const upgradeRows = {};      // upgrade id -> { button, note }
 
   const STATUS = { walk: "Strolling", idle: "Taking a break", sleep: "Napping" };
@@ -133,13 +134,53 @@ const UI = (() => {
     }
   }
 
+  // "1 hour 25 minutes", "2 hours", "1 minute"
+  function duration(minutes) {
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (!h) return plural(m, "minute");
+    return m ? `${plural(h, "hour")} ${plural(m, "minute")}` : plural(h, "hour");
+  }
+
+  // Coins earned while the game was closed. They're already in state.coins;
+  // the header counts up to them when the player collects.
+  function showAway(state, away) {
+    const cats = byId("away-cats");
+    cats.replaceChildren();
+    for (const cat of state.cats) {
+      const pic = make("canvas", "portrait");
+      pic.width = 20;
+      pic.height = 17;
+      Scene.portrait(pic, cat.look, 0);
+      cats.append(pic);
+    }
+    const who = state.cats.length === 1 ? state.cats[0].name : "Your cats";
+    setText(byId("away-text"), `${who} kept the café open for ${duration(away.minutes)} while you were away.`);
+    setText(byId("away-coins"), `+${away.coins}`);
+    const note = byId("away-note");
+    note.textContent = away.capped ? `Earnings while you're away stop at ${duration(CONFIG.OFFLINE_MAX_MINUTES)}.` : "";
+    note.hidden = !away.capped;
+
+    shownCoins = state.coins - away.coins;
+    lastCoins = state.coins;
+    holdCoins = true;
+    const dialog = els["away-dialog"];
+    dialog.addEventListener("close", () => {
+      holdCoins = false;
+      restartAnimation(els["stat-coins"], "gain");
+      Sound.play("coin");
+    }, { once: true });
+    dialog.showModal();
+  }
+
   // ---------- setup ----------
   function init(handlers, state) {
     current = state;
     for (const id of ["coins", "cat-count", "stat-coins", "refill", "shop", "message", "info", "info-name", "info-meta",
       "info-value", "info-bar", "info-fill", "info-hungry", "info-portrait", "info-empty", "stray-panel", "stray-text",
       "stray-meta", "stray-full", "stray-portrait", "stray-empty", "adopt", "mute-btn", "mute-icon",
-      "upgrades-dialog", "book-dialog"]) {
+      "upgrades-dialog", "book-dialog", "away-dialog"]) {
       els[id] = byId(id);
     }
 
@@ -176,6 +217,9 @@ const UI = (() => {
         if (e.target === dialog) dialog.close();
       });
     }
+    els["away-dialog"].addEventListener("click", (e) => {
+      if (e.target === els["away-dialog"]) els["away-dialog"].close();
+    });
     buildUpgrades(handlers);
 
     document.addEventListener("keydown", (e) => {
@@ -234,7 +278,7 @@ const UI = (() => {
     lastCoins = state.coins;
 
     const diff = state.coins - shownCoins;
-    if (diff !== 0) shownCoins += Math.sign(diff) * Math.min(Math.abs(diff), Math.max(1, Math.ceil(Math.abs(diff) * dt * 6)));
+    if (diff !== 0 && !holdCoins) shownCoins += Math.sign(diff) * Math.min(Math.abs(diff), Math.max(1, Math.ceil(Math.abs(diff) * dt * 6)));
     setText(els.coins, String(shownCoins));
     setText(els["cat-count"], `${state.cats.length}/${state.maxCats}`);
     els.refill.classList.toggle("short", state.coins < CONFIG.FOOD_COST);
@@ -295,5 +339,5 @@ const UI = (() => {
     renderUpgrades(state);
   }
 
-  return { init, render, showMessage, showPayment, showRefill, showUpgrade };
+  return { init, render, showMessage, showPayment, showRefill, showUpgrade, showAway };
 })();

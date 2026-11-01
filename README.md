@@ -28,6 +28,9 @@ Add `?stray=1` to the URL to make a stray appear at the door right away, and to 
 ### Test mode: start over
 The game saves itself (see "Saving" below). Add `?reset=1` to the URL to delete the save and start a new game. Remove it again afterwards, or every reload starts over. Options combine, e.g. `index.html?reset=1&stray=1&speed=10`.
 
+### Test mode: offline earnings
+Add `?away=30` to load your save as if the game had been closed for 30 minutes: the "Welcome back" message pays 300 coins. Try `?away=600` to see the 2-hour cap (1,200 coins). It pays again on every reload while it's in the URL, so remove it afterwards. It does nothing on a new game, since there's no save to come back to.
+
 In the browser console, `Sound.status()` shows whether audio has started and whether it's muted.
 
 ## Controls
@@ -54,6 +57,9 @@ Things to know:
 
 ### Saving
 The game saves to your browser's local storage every 5 seconds, when you adopt or buy something, and when you leave or hide the page. A reload brings back your coins, cats (with their fullness), upgrades, cat book and sound setting; you don't get the starting coins or a second Cream again. Customers and a waiting stray aren't saved. If storage is blocked (some private windows), the game still works but starts fresh each time. To start over, use `?reset=1`.
+
+### Offline earnings
+When you come back to a saved game, a "Welcome back" message pays 10 coins for every full minute the game was closed, up to 2 hours (1,200 coins). The coins are added and saved the moment the game loads, so a reload doesn't pay the same time twice; the header counts up when you press **Collect coins**. Cats don't get hungrier while the game is closed. A hidden tab doesn't count as time away: the game is paused there and keeps saving. Leftover seconds under a full minute aren't paid.
 - If the page looks unchanged after an update, hard-refresh (Cmd+Shift+R / Ctrl+Shift+R): the Python server lets browsers cache the files.
 
 ## Art style
@@ -113,11 +119,14 @@ Numbers match `SPEC.md` section 4. "Done" means implemented and checked in the b
 | 23 | Seats 2 → 3 for 100, cats 3 → 5 for 150, once each, not without coins | ✅ Done. The Third table also halves the arrival interval to 10 s (a spec change, now in `SPEC.md`), since with 20 s arrivals and 30 s stays the third seat never filled. Simulated: 28 → 57 customers per 10 minutes, all three seats full 95% of the time |
 | 24 | Cat book: adopted cats with descriptions, others locked | ✅ Done (9 cats) |
 | 25 | Mute button turns all music and effects off and back on | ✅ Done (audio start/stop checked in the browser; how it sounds still needs a listen) |
-| 26–29 | P2 features | ❌ Not started |
+| 26 | Decorations: 3+ kinds, placed in free slots, charged once | ❌ Not started |
+| 27 | 2+ personalities affect rest or movement; clicking raises affection | ❌ Not started |
+| 28 | 10 coins per full offline minute, max 120, paid once, no fullness loss offline | ✅ Done (checked in the browser: 47.5 min away paid 470; a reload paid nothing more; `?away=600` paid the 1,200 cap; fullness unchanged by the time away) |
+| 29 | New drink, auto-refill staff, shop expansion, prices and effects shown | ❌ Not started |
 
 ## Code map
 
-Scripts are plain (no modules) and load in this order from `index.html`: `config.js` → `cats.js` → `customers.js` → `strays.js` → `upgrades.js` → `save.js` → `sprites.js` → `sound.js` → `scene.js` → `ui.js` → `main.js`. Each file exposes one global object.
+Scripts are plain (no modules) and load in this order from `index.html`: `config.js` → `cats.js` → `customers.js` → `strays.js` → `upgrades.js` → `save.js` → `offline.js` → `sprites.js` → `sound.js` → `scene.js` → `ui.js` → `main.js`. Each file exposes one global object.
 
 | File | Responsible for | Go here to change… |
 |---|---|---|
@@ -131,8 +140,9 @@ Scripts are plain (no modules) and load in this order from `index.html`: `config
 | `strays.js` | `Strays`: `update(state, dt)` runs the 60 s check; `spawn(state)` puts a roster cat at the door; `adopt(state)` / `turnAway(state)` handle the two buttons (adopting also records the cat in the book); `canAdopt(state)` checks capacity | Stray timing, chance, which cats come by, what adopting does |
 | `upgrades.js` | `Upgrades`: `LIST` (names and descriptions), `buy(state, id)` (returns `"bought"`, `"owned"` or `"poor"`), `canBuy`, `owned`, `apply(state)` (sets seats, arrival interval and cat capacity from what's owned) | What upgrades exist and what they do |
 | `save.js` | `Save`: `write(state)`, `load()` (checked save or `null`), `clear()` | What gets saved |
+| `offline.js` | `Offline`: `minutesAway(savedAt, now)` (full minutes, capped), `collect(state, savedAt, now)` adds the coins and returns `{ minutes, coins, capped }`; `main.js` saves right after so it's paid once | Offline earnings rules (the rates are in `config.js`) |
 | `sound.js` | `Sound`: `unlock()` (first input), `setMuted(bool)`, `play(name)`, `meow(catId)`, `status()`; music and effects synthesized with Web Audio | Music, sound effects, volumes |
-| `ui.js` | `UI`: `init(handlers, state)`, `render(state)` (hands the state to `Scene`, then updates the header, panels and open dialog every frame), `showMessage(text)`, `showPayment`, `showRefill`, `showUpgrade`; picks the pixel scale, handles mouse input, builds the dialogs | Anything outside the canvas, clicks and hover |
+| `ui.js` | `UI`: `init(handlers, state)`, `render(state)` (hands the state to `Scene`, then updates the header, panels and open dialog every frame), `showMessage(text)`, `showPayment`, `showRefill`, `showUpgrade`, `showAway(state, away)` (the welcome-back message); picks the pixel scale, handles mouse input, builds the dialogs | Anything outside the canvas, clicks and hover |
 | `main.js` | `createInitialState(saved)` (new game or loaded save), the button handlers, autosave, the `update(dt)` step, and the `requestAnimationFrame` loop with background pause | Starting state, adding a new system to the game loop |
 
 ### How the pieces fit
@@ -144,8 +154,8 @@ Scripts are plain (no modules) and load in this order from `index.html`: `config
 
 ## What I'd do next (priority order)
 
-All P0 and P1 features are in, with final pixel art. (The old bug where cats at the bottom edge were cut off is gone: cats are now positioned by their feet and fit inside the room.)
+All P0 and P1 features are in, with final pixel art, plus offline earnings from P2. (The old bug where cats at the bottom edge were cut off is gone: cats are now positioned by their feet and fit inside the room.)
 
 1. **Listen to the sound** in a normal browser: music volume, meows, coin, bell, kibble. It was only checked that audio starts, stops and mutes.
 2. **Check the pause with a real tab switch** in a normal browser. It was only tested by faking the page's hidden state.
-3. **P2**: decorations, cat personalities and affection, offline earnings (the save already stores `savedAt`), expanded management.
+3. **The rest of P2**: cat personalities and affection, decorations, expanded management (staff, drinks, expansion).

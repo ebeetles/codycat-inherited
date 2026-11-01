@@ -15,6 +15,10 @@ const CONFIG = {
   // Test helper: open index.html?reset=1 to delete the saved game and start over.
   RESET_SAVE: urlParams.get("reset") === "1",
 
+  // Test helper: open index.html?away=30 to load the save as if the game had
+  // been closed for 30 minutes (pays offline coins on every load while set).
+  AWAY_TEST: Math.max(0, Number(urlParams.get("away")) || 0),
+
   // Starting state (SPEC 2.1)
   START_COINS: 100,
   START_SEATS: 2,
@@ -46,6 +50,10 @@ const CONFIG = {
   // Saving (SPEC P1 #22)
   SAVE_KEY: "cozy-cat-cafe-save",
   SAVE_EVERY_SECONDS: 5,
+
+  // Offline earnings (SPEC P2 #28)
+  OFFLINE_COINS_PER_MINUTE: 10,
+  OFFLINE_MAX_MINUTES: 120,
 
   // Layout (pixels inside the 640x400 shop; the pixel art is drawn at half
   // this size, so each art pixel is 2 of these). Positions are where things

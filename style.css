@@ -297,6 +297,34 @@ h1 {
 .upgrade-side .btn { min-width: calc(26 * var(--px)); justify-content: center; }
 .upgrade-note { font-size: var(--text-sm); color: var(--rose-dark); min-height: 1em; }
 
+#away-dialog {
+  width: min(calc(160 * var(--px)), calc(100vw - 32px));
+  text-align: center;
+}
+.away-cats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--px));
+  margin: calc(4 * var(--px)) 0 calc(3 * var(--px));
+}
+.away-text { margin: 0; }
+.away-amount {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  margin: calc(3 * var(--px)) 0 0;
+  font-family: var(--display);
+  font-size: calc(16px * var(--s));
+  line-height: 1;
+  color: var(--honey-dark);
+}
+/* the coin at twice its art size, so its pixels stay square */
+.away-amount .icon { width: calc(var(--w) * 2 * var(--px)); height: calc(var(--h) * 2 * var(--px)); }
+.away-note { margin: calc(1 * var(--px)) 0 0; }
+.away-actions { margin-top: calc(5 * var(--px)); }
+
 .book-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
