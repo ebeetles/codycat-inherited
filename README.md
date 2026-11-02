@@ -1,6 +1,6 @@
 # Cozy Cat Café
 
-**Designed and built by [Original author's name].** They wrote the game design (`SPEC.md`) and built the foundation this version grows from: the game loop, cat behavior and hunger, customers and payments, the config-driven structure, and the split between game logic and drawing. I took it over from there; see "Changes to the original design" below for what I changed and why.
+**Designed and built by Oulan.** They wrote the game design (`SPEC.md`) and built the foundation this version grows from: the game loop, cat behavior and hunger, customers and payments, the config-driven structure, and the split between game logic and drawing. I took it over from there; see "Changes to the original design" below for what I changed and why.
 
 A cozy, low-pressure cat café game for the browser. Cats wander around the shop, customers drop in and pay, strays turn up at the door, and you keep the cats fed, grow the café and decorate it. Progress is saved in the browser. The full design is in [`SPEC.md`](SPEC.md) (kept as received, with my proposed rule changes in a marked section at the bottom); this README covers how to run the game, what works so far, and where things live in the code.
 
