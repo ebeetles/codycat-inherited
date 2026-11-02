@@ -1,6 +1,6 @@
 # Cozy Cat Café
 
-A cozy, low-pressure cat café game for the browser. Cats wander around the shop, customers drop in and pay, and you keep the cats fed. The full design is in [`SPEC.md`](SPEC.md); this README covers how to run the game, what works so far, and where things live in the code.
+A cozy, low-pressure cat café game for the browser. Cats wander around the shop, customers drop in and pay, strays turn up at the door, and you keep the cats fed, grow the café and decorate it. Progress is saved in the browser. The full design is in [`SPEC.md`](SPEC.md); this README covers how to run the game, what works so far, and where things live in the code.
 
 ## How to run
 
@@ -14,13 +14,24 @@ No install, no build step, no dependencies. It's plain HTML, CSS and JavaScript.
 ```
 python3 -m http.server 8000
 ```
-Then open http://localhost:8000.
+Then open http://localhost:8000. If the page looks unchanged after an update, hard-refresh (Cmd+Shift+R / Ctrl+Shift+R): the Python server lets browsers cache the files.
 
 **Option C: GitHub Pages** (if enabled on this repo)
 Open the Pages URL shown under Settings → Pages.
 
 ### Test mode: faster time
 Add `?speed=10` to the URL (for example `index.html?speed=10`) to run the simulation 10x faster. Useful for checking timers, hunger and customer payments without waiting. Normal play uses speed 1.
+
+### Test mode: force strays
+Add `?stray=1` to the URL to make a stray appear at the door right away, and to make every later stray check succeed (so the next stray arrives exactly 60 s after you adopt or turn one away). Combine with speed for quick checks: `index.html?stray=1&speed=10` brings a new stray 6 real seconds after each one is handled. Without `?stray=1`, each check uses the normal 50% chance.
+
+### Test mode: start over
+The game saves itself (see "Saving" below). Add `?reset=1` to the URL to delete the save and start a new game. Remove it again afterwards, or every reload starts over. Options combine, e.g. `index.html?reset=1&stray=1&speed=10`.
+
+### Test mode: offline earnings
+Add `?away=30` to load your save as if the game had been closed for 30 minutes: the "Welcome back" message pays 300 coins. Try `?away=600` to see the 2-hour cap (1,200 coins). It pays again on every reload while it's in the URL, so remove it afterwards. It does nothing on a new game, since there's no save to come back to.
+
+In the browser console, `Sound.status()` shows whether audio has started and whether it's muted.
 
 ## Controls
 
@@ -29,39 +40,77 @@ Mouse only.
 | Action | What it does |
 |---|---|
 | **Refill food** button | Costs 10 coins. Adds 30 fullness to every cat (max 100). Shows "Not enough coins" if you have fewer than 10. |
-| Click a cat | Shows its name and fullness in the panel below the shop, plus a heart. Close the panel with ✕. |
+| Click a cat | A heart pops up, the cat gains 2 affection, a marker appears over it, and the panel below the shop shows its portrait, name, look, personality, what it's doing, fullness and affection. Close the panel with the × button or Esc. Hovering a cat shows its name. |
+| **Adopt** (when a stray is at the door) | Free. The stray walks into the shop with 100 fullness, the cat count goes up by 1, and it's added to the cat book. Disabled, with "The café is full", when the café is at capacity (3 cats, 5 with Cozier café, 9 with the Cat loft). |
+| **Not now** (when a stray is at the door) | The stray leaves. Nothing else changes. It may come back another time. |
+| **Cat book** button (book icon) | Every cat that can live in the café. Adopted cats show their portrait, look, personality and a short description; the rest are locked silhouettes. |
+| **Decorate** button (plant icon) | Buy a decoration and click a glowing spot to place it (see "Decorating" below). |
+| **Upgrades** button (shop icon) | Grouped under Room, Menu and Staff: **Third table** (100 coins; customers also try to arrive every 10 s instead of 20), **Cozier café** (150, room for 5 cats), **Cat loft** (300, room for 9), **Matcha latte** (120) and **Hire Juniper** (200). Each can be bought once; Buy is disabled, with the reason, until you can buy it. |
+| **Sound** button (speaker icon) | Mutes all music and sound effects; click again to turn them back on. The setting is saved. |
 
 Things to know:
-- 🪙 in the header is your coin balance; 🐱 shows cats / capacity (e.g. `1/3`).
-- 🍽️ above a cat means it's hungry (fullness below 30). 💤 means it's sleeping.
-- A customer shows ☕ (drinking coffee) or 🐾 (playing with cats). The bar under them fills up over their 30-second stay; then they pay and a `+25 🪙` effect appears.
-- Switching to another tab pauses the game. Refreshing starts a new game (no saving yet).
+- Strays walk in through the door and sit just to its right with a "?" bubble; the left panel below the shop names them. Only one waits at a time, and it waits until you choose. Turned-away strays walk back out.
+- The header shows your coins (with a coin icon) and cats / capacity (e.g. `1/3`). The coin count ticks up when customers pay.
+- A fish bubble over a cat means it's hungry (fullness below 30). Floating "z"s mean it's asleep. The food bowl looks fuller or emptier with the cats' average fullness.
+- Customers walk in from the door, sit at a table, and either sip coffee or wave a feather toy for the cats. The bar above them fills over their 30-second stay; then a coin pops up with the amount they paid and they walk out.
+- Switching to another tab pauses the game and its sound.
+- Sound starts after your first click or key press (browsers don't allow it sooner): a soft music-box loop, meows (each cat has its own pitch; when you pet a cat, when a stray arrives, and now and then on their own), a coin chime, the door bell, kibble rattling on refill, and little jingles for adopting and upgrades. It's all synthesized in the browser; there are no audio files.
+
+### Saving
+The game saves to your browser's local storage every 5 seconds, when you adopt or buy something, and when you leave or hide the page. A reload brings back your coins, cats (with their fullness and affection), upgrades, decorations, cat book and sound setting; you don't get the starting coins or a second Cream again. Customers and a waiting stray aren't saved. Saves from before decorations and affection existed still load. If storage is blocked (some private windows), the game still works but starts fresh each time. To start over, use `?reset=1`.
+
+### Offline earnings
+When you come back to a saved game, a "Welcome back" message pays 10 coins for every full minute the game was closed, up to 2 hours (1,200 coins). The coins are added and saved the moment the game loads, so a reload doesn't pay the same time twice; the header counts up when you press **Collect coins**. Cats don't get hungrier while the game is closed. A hidden tab doesn't count as time away: the game is paused there and keeps saving. Leftover seconds under a full minute aren't paid.
+
+### Personalities and affection
+Every cat has a personality, shown on its card, in the cat book and when it waits at the door (hover the card's personality for what it means):
+- **Playful** (Pepper, Smudge, Pudding): rests half as long, naps less, walks 30% faster.
+- **Sleepy** (Cream, Tofu, Biscuit): naps more often and twice as long, walks a little slower. In a long simulation a sleepy cat napped about 80% of the time, against 45% for a cat with no personality.
+- **Curious** (Mochi, Luna, Sesame): sets off walking more often and keeps going longer.
+
+Each click on a cat adds 2 affection (up to 100), shown as five hearts and a number on its card. Affection is saved.
+
+### Growing the café
+- **Room:** Third table (100), Cozier café (150, 5 cats), then the **Cat loft** (300): a doorway with stairs to an upstairs lounge, room for all 9 cats. The loft needs Cozier café first. With all 9 adopted no more strays come, and the door panel says so.
+- **Menu: Matcha latte** (120): about half of customers order one and pay 10 extra (they have a green cup).
+- **Staff: Hire Juniper** (200): she waits by the counter, and whenever a cat gets hungry she walks to the bowl and refills it for the usual 10 coins (only if you have them).
+
+Every upgrade shows its price and what it does before you buy it, and a note when you can't yet ("Needs Cozier café", "35 more coins needed").
+
+### Decorating
+The **Decorate** button (plant icon) lists four decorations: Cat cushion (30), Yarn basket (45), Floor lamp (70, glows) and Fish tank (100, fish swim and bubbles rise). Press **Place**, then click one of the glowing spots in the café (five in all); you're charged once, when it's placed. Esc or **Cancel** stops without charging. You can buy the same kind more than once while spots are free.
 
 ## Art style
 
 ### Direction
 **Pixel art is the recommended style.** Any other healing, cozy style is also welcome. Whatever you pick, the game should feel calm, warm and gentle: soft colors, rounded or friendly shapes, nothing harsh or flashy.
 
-**No emoji in the final art.** The emoji currently in the game are temporary placeholders only. Replace all of them (cats, customers, furniture, status icons, coins, hearts) with drawn art in one consistent style.
+**No emoji in the final art.** All art is now drawn pixel art in one style; keep it that way.
 
-### What's there now (placeholder art)
-- **Mood:** warm and soft. Cream background, beige wall, light wood floor, burnt-orange buttons.
-- **Cats:** a colored circle with a 🐱 face; the circle's color is the cat's fur color (orange, gray, black, white).
-- **Everything else:** emoji (🚪 door, 🥣 bowl, 🪑 seats, 🧑 customers, ☕ / 🐾 activity, 💤 sleeping, 🍽️ hungry).
-- **Layout:** one top-down room. The wall strip at the top holds the door, bowl and seats; the floor below is where cats wander.
-- **Feedback:** hearts and `+25 🪙` float up and fade out.
-
-These emoji are placeholders only and should all be replaced (see "No emoji" above). Do this after the stray feature is working, since strays are the last missing P0 feature.
+### What's there now: "evening at the café"
+- **Mood:** the café is a warmly lit room at sunset, set in a dusky plum page with a few pixel stars, so the room glows. Sage wallpaper, honey-oak floor, dusty-rose rug, walnut wood, cream tablecloths.
+- **Cats:** 20×14 side-view sprites with a 4-frame walk, sitting (tail swish, blinks) and curled-up sleeping (breathing). Eight looks: orange tabby (Cream only), gray tabby, black tuxedo with yellow eyes, white with blue eyes, cream tabby, blue gray with green eyes, brown tabby, tortoiseshell.
+- **Upgrades show in the room:** until the Third table is bought its spot holds a potted fern; Cozier café adds a second (rose) cat bed; the Cat loft opens an arched doorway (over Cream's portrait) with stairs, lantern light and, now and then, a tail swishing at the top; matcha comes in green cups; Juniper wears a cream apron.
+- **Decorations:** drawn in code (`DECOR_ART` in `scene.js`) so the same art appears in the room and in the Decorate panel. The floor lamp casts a warm pool of light; the fish tank's goldfish swim and its castle bubbles.
+- **Customers:** chibi people with a stable random look per customer (skin, hair style and color, shirt, pants).
+- **Live room:** drifting clouds, the setting sun and an occasional bird in the window; a sunbeam with dust motes on the floor; twinkling string lights; pendant lamp glow; espresso machine and coffee cup steam; swaying plants and cat-tree toy; a wall clock showing your real local time; the door opening with a swinging bell when someone comes or goes.
+- **Page chrome:** wooden header, parchment cards and honey/sage buttons with pixel-notched corners. Every border and offset is a whole number of art pixels.
+- **Fonts:** Jersey 10 (title, numbers) and Pixelify Sans (everything else), from Google Fonts; a monospace fallback is used offline.
+- **Scale:** the art is 320×200 pixels, drawn at the largest whole-number scale that fits the window (1× on phones, usually 2–3× on desktop), so pixels stay square and crisp.
+- **Reduced motion:** with the OS "reduce motion" setting, ambient effects (dust, clouds, birds, twinkling, plant sway) and page animations are turned off; the cats and customers still move.
 
 ### Where to change it
-- **Colors:** the CSS variables at the top of `style.css` (`--bg`, `--wall`, `--floor`, `--accent`, …).
-- **Cat look:** `.cat-body` in `style.css`, built in `createCatEl()` in `ui.js`. Fur colors are in `CONFIG.CAT_LOOKS` in `config.js`.
-- **Customers, door, bowl, seats:** the emoji in `ui.js` (`renderCustomers`, `init`) and `index.html`.
-- **Pixel-art tip:** if you add sprite images, add `image-rendering: pixelated;` to their CSS so they stay crisp when scaled, and keep sizes in whole multiples (e.g. 16 px art drawn at 48 px).
+- **Page colors and fonts:** the tokens at the top of `style.css` (`--dusk`, `--parchment`, `--walnut`, `--honey`, `--sage`, …).
+- **Sprites** (cats, customers, icons, bowl): text grids in `sprites.js`, one character per pixel, with palettes. Cat fur colors are `CAT_PALETTES`; customer colors are `SKINS`, `HAIRS`, `SHIRTS`, `PANTS`.
+- **Cats in the game:** `CONFIG.CAT_ROSTER` in `config.js` (name, look, personality, cat book description). Add a look by adding a palette in `sprites.js` and a label in `CONFIG.CAT_LOOKS`. Personalities are `CONFIG.PERSONALITIES` (odds of walking / idling / sleeping next, how long each lasts, walking speed).
+- **Decorations and spots:** `CONFIG.DECOR` (names, prices, descriptions) and `CONFIG.DECOR_SLOTS` (where they go); the art is `DECOR_ART` in `scene.js`.
+- **Music and sounds:** `sound.js` (the chords and tempo are at the top; each effect is a small function in `EFFECTS`).
+- **The room** (wall, floor, counter, window, door, decor): `drawRoom()` in `scene.js`, drawn once. Live details each have their own `draw…()` function in `scene.js`.
+- **Where things stand:** `CONFIG.DOOR_POS`, `STRAY_POS`, `BOWL_POS`, `SEAT_POSITIONS`, `DECOR_SLOTS` and `CAT_AREA` in `config.js` (game coordinates are 640×400, twice the art size).
 
 ## Acceptance criteria status
 
-Numbers match `SPEC.md` section 4. "Done" means implemented; the game logic was also run through a 10-minute automated simulation (no out-of-bounds cats, never more than 2 customers, every payment 20 + 5 × fed cats).
+Numbers match `SPEC.md` section 4. "Done" means implemented and checked in the browser; the game was also run through 10-minute automated simulations (no out-of-bounds cats, never more customers than seats, every payment 20 + 5 × fed cats, plus 10 for a matcha). The last one ran with all 9 cats, every upgrade and every spot decorated: no errors, coins never dropped, and Juniper kept every cat fed.
 
 | # | Criterion | Status |
 |---|---|---|
@@ -73,49 +122,62 @@ Numbers match `SPEC.md` section 4. "Done" means implemented; the game logic was 
 | 6 | Hunger marker below 30, disappears at 30+ | ✅ Done |
 | 7 | Refill food: −10 coins, +30 fullness to all cats, max 100 | ✅ Done |
 | 8 | Refill with < 10 coins → "Not enough coins", nothing changes | ✅ Done |
-| 9 | Stray check every 60 s, 50% chance, one at a time | ❌ Not started |
-| 10 | 3+ stray looks; each cat has own id / name / fullness | ⚠️ Partial: looks are defined in `config.js` and each cat already has its own id/name/fullness, but strays don't exist yet |
-| 11 | Adopt adds the stray, count +1, coins unchanged, fullness 100 | ❌ Not started |
-| 12 | At 3 cats, Adopt disabled + "The café is full" | ❌ Not started |
-| 13 | "Not now" removes the stray, nothing else changes | ❌ Not started |
-| 14 | Next stray check 60 s after adopt / turn away | ❌ Not started |
-| 15 | Customer every 20 s if a seat is free, max 2 | ✅ Done |
-| 16 | Customer stays 30 s, pays 20 + 5 × fed cats | ✅ Done |
+| 9 | Stray check every 60 s, 50% chance, one at a time | ✅ Done (2,000 checks came out at 51%; no second stray while one waits) |
+| 10 | 3+ stray looks; each cat has own id / name / fullness | ✅ Done (7 stray looks; Mochi and Tofu share a look but are different cats) |
+| 11 | Adopt adds the stray, count +1, coins unchanged, fullness 100 | ✅ Done |
+| 12 | At 3 cats, Adopt disabled + "The café is full" | ✅ Done (5 cats with Cozier café, 9 with the Cat loft) |
+| 13 | "Not now" removes the stray, nothing else changes | ✅ Done |
+| 14 | Next stray check 60 s after adopt / turn away | ✅ Done |
+| 15 | Customer every 20 s if a seat is free, max 2 | ✅ Done (after the Third table: 3 seats, an arrival try every 10 s) |
+| 16 | Customer stays 30 s, pays 20 + 5 × fed cats | ✅ Done (plus 10 for a matcha once it's on the menu, P2 #29) |
 | 17 | Each payment counted once, seat freed | ✅ Done |
 | 18 | Cats at 0 fullness stay; customers and refills still work | ✅ Done |
-| 19 | Runs 10 minutes with no double charges or overflows | ✅ Done (checked in the logic simulation; worth a quick manual check in the browser with `?speed=10`) |
+| 19 | Runs 10 minutes with no double charges or overflows | ✅ Done (checked in the browser with `?speed=10` over 11 game minutes, before strays were added) |
 | 20 | Pauses in background, no catch-up | ✅ Done |
-| 21 | README explains how to test random events (e.g. force a stray) | ⚠️ Partial: `?speed=10` exists; a "force a stray" test option still needs adding with the stray feature |
-| 22–29 | P1 / P2 features | ❌ Not started |
+| 21 | README explains how to test random events (e.g. force a stray) | ✅ Done: see "Test mode: force strays" above |
+| 22 | Refresh restores coins, cats, fullness; no second Cream or starting coins | ✅ Done (also restores upgrades, cat book and sound setting; damaged saves start a new game) |
+| 23 | Seats 2 → 3 for 100, cats 3 → 5 for 150, once each, not without coins | ✅ Done. The Third table also halves the arrival interval to 10 s (a spec change, now in `SPEC.md`), since with 20 s arrivals and 30 s stays the third seat never filled. Simulated: 28 → 57 customers per 10 minutes, all three seats full 95% of the time |
+| 24 | Cat book: adopted cats with descriptions, others locked | ✅ Done (9 cats) |
+| 25 | Mute button turns all music and effects off and back on | ✅ Done (audio start/stop checked in the browser; how it sounds still needs a listen) |
+| 26 | Decorations: 3+ kinds, placed in free slots, charged once | ✅ Done (4 kinds, 5 spots. Checked: placing charged once; a taken spot and too few coins were refused without charging; Cancel and Esc charge nothing; with every spot full, Place is disabled with "No free spots") |
+| 27 | 2+ personalities affect rest or movement; clicking raises affection | ✅ Done (3 personalities; simulated nap share 80% sleepy vs 45% default, playful and curious walk more. Each click +2 affection, shown as hearts, capped at 100, saved) |
+| 28 | 10 coins per full offline minute, max 120, paid once, no fullness loss offline | ✅ Done (checked in the browser: 47.5 min away paid 470; a reload paid nothing more; `?away=600` paid the 1,200 cap; fullness unchanged by the time away) |
+| 29 | New drink, auto-refill staff, shop expansion, prices and effects shown | ✅ Done (Matcha latte: 48% of 2,000 customers ordered it, paying 35 instead of 25 with one fed cat. Juniper refilled as soon as a cat dropped below 30, for 10 coins. Cat loft raised capacity to 9 and was refused until Cozier café was owned. Every row shows price, effect and why Buy is disabled) |
 
 ## Code map
 
-Scripts are plain (no modules) and load in this order from `index.html`: `config.js` → `cats.js` → `customers.js` → `ui.js` → `main.js`. Each logic file exposes one global object.
+Scripts are plain (no modules) and load in this order from `index.html`: `config.js` → `cats.js` → `customers.js` → `strays.js` → `upgrades.js` → `decor.js` → `staff.js` → `save.js` → `offline.js` → `sprites.js` → `sound.js` → `scene.js` → `ui.js` → `main.js`. Each file exposes one global object.
 
 | File | Responsible for | Go here to change… |
 |---|---|---|
-| `index.html` | Page structure: header (coins, cat count, Refill button), the `#shop` box, info panel, message bar, script tags | Buttons or panels on the page |
-| `style.css` | All visuals. Colors are CSS variables at the top. Everything inside `#shop` is absolutely positioned and centered on its (x, y) | Colors, sizes, cat/customer look, animations |
-| `config.js` | `CONFIG`: every number from the spec (costs, timers, chances), layout positions, cat looks, stray names, the `?speed=` test option | Balance, timings, where the door / bowl / seats are, cat colors |
-| `cats.js` | `Cats`: `create(name, look)`, `update(cat, dt)` (fullness decay + walk/idle/sleep behavior), `isHungry(cat)`, `refillAll(state)` | How cats move, hunger rules, feeding |
-| `customers.js` | `Customers`: `update(state, dt, onPaid)` handles spawning every 20 s, seating, the 30 s stay and checkout; `paymentFor(state)` computes the bill | Customer timing and payment rules |
-| `ui.js` | `UI`: `init(handlers)`, `render(state)` (draws cats, customers, header, info panel every frame), `showMessage(text)`, `showPayment(customer, amount)` | Anything you see or click |
-| `main.js` | `createInitialState()`, the `update(dt)` step, and the `requestAnimationFrame` loop with background pause | Starting state, adding a new system to the game loop |
+| `index.html` | Page structure: header (coins, cat count, Cat book / Decorate / Upgrades / Sound buttons, Refill), the `#shop` canvas, message bubble and placing bar, door panel (Adopt / Not now), cat panel, the Upgrades, Decorate, Cat book and Welcome back dialogs, script tags | Buttons, panels or dialogs on the page |
+| `style.css` | The page chrome: header, buttons, panels, messages, page background. Color and font tokens at the top; sizes in `--px` (one art pixel) | Page colors, fonts, button and panel looks |
+| `sprites.js` | `Sprites`: every sprite as a text grid + palette, turned into cached canvases. `cat(look, frame, facing)`, `customer(look, pose)` (a look with `apron` is staff; `STAFF_LOOK` is Juniper), `customerLook(id)`, `icon(name)` | How cats, customers and icons look; adding animation frames |
+| `scene.js` | `Scene`: draws the room on the canvas each frame: static room (`drawRoom`), live details, cats, customers walking and sitting, the stray, effects (hearts, coins, sparkles, steam, z's), decorations and the glowing spots while placing, Juniper's walk to the bowl, the loft doorway. `catAt()` and `slotAt()` hit-test clicks. Reads state, never changes it | The room, decor, ambient animation, effects |
+| `config.js` | `CONFIG`: every number from the spec (costs, timers, chances, upgrade and decoration prices), personalities, layout positions, cat looks, the cat roster, save and offline settings, the `?speed=`, `?stray=`, `?reset=` and `?away=` test options | Balance, timings, upgrade prices, where things stand, which cats exist |
+| `cats.js` | `Cats`: `create(name, look)` (personality comes from the roster), `restore(saved)`, `update(cat, dt)` (fullness decay + walk/idle/sleep behavior, shaped by personality), `isHungry(cat)`, `pet(cat)` (affection), `refillAll(state)` | How cats move, hunger rules, feeding, affection |
+| `customers.js` | `Customers`: `update(state, dt, onPaid)` handles spawning (every `state.customerSpawnSeconds`: 20 s, or 10 s with the Third table), seating, the 30 s stay and checkout; `paymentFor(state, customer)` computes the bill (including a matcha) | Customer timing and payment rules |
+| `strays.js` | `Strays`: `update(state, dt)` runs the 60 s check; `spawn(state)` puts a roster cat that doesn't live here yet at the door; `adopt(state)` / `turnAway(state)` handle the two buttons (adopting also records the cat in the book); `canAdopt(state)` checks capacity | Stray timing, chance, which cats come by, what adopting does |
+| `upgrades.js` | `Upgrades`: `LIST` (groups, names and descriptions), `buy(state, id)` (returns `"bought"`, `"owned"`, `"locked"` or `"poor"`), `canBuy`, `owned`, `needs` (an upgrade required first), `apply(state)` (sets seats, arrival interval and cat capacity from what's owned) | What upgrades exist and what they do |
+| `decor.js` | `Decor`: `place(state, kind, slot)` (returns `"placed"`, `"poor"` or `"taken"`; charges only on `"placed"`), `freeSlots`, `canBuy` | Decoration buying rules |
+| `staff.js` | `Staff`: `update(state, onRefill)` refills food as soon as a cat is hungry, once Juniper is hired | What staff do |
+| `save.js` | `Save`: `write(state)`, `load()` (checked save or `null`), `clear()` | What gets saved |
+| `offline.js` | `Offline`: `minutesAway(savedAt, now)` (full minutes, capped), `collect(state, savedAt, now)` adds the coins and returns `{ minutes, coins, capped }`; `main.js` saves right after so it's paid once | Offline earnings rules (the rates are in `config.js`) |
+| `sound.js` | `Sound`: `unlock()` (first input), `setMuted(bool)`, `play(name)`, `meow(catId)`, `status()`; music and effects synthesized with Web Audio | Music, sound effects, volumes |
+| `ui.js` | `UI`: `init(handlers, state)`, `render(state)` (hands the state to `Scene`, then updates the header, panels and open dialog every frame), `showMessage(text)`, `showPayment`, `showRefill`, `showUpgrade`, `showPlaced`, `showStaffRefill`, `showAway(state, away)` (the welcome-back message); picks the pixel scale, handles mouse input and placing decorations, builds the dialogs | Anything outside the canvas, clicks and hover |
+| `main.js` | `createInitialState(saved)` (new game or loaded save), the button handlers, autosave, the `update(dt)` step, and the `requestAnimationFrame` loop with background pause | Starting state, adding a new system to the game loop |
 
 ### How the pieces fit
-- **State** is one plain object (`state` in `main.js`): `coins`, `cats[]`, `customers[]`, `seats[]` (customer id or `null`), `customerSpawnTimer`.
+- **State** is one plain object (`state` in `main.js`): `coins`, `cats[]`, `customers[]`, `seats[]` (customer id or `null`, one per table), `customerSpawnTimer`, `customerSpawnSeconds`, `stray` (the cat at the door or `null`), `strayCheckTimer`, `upgrades` (`{ seats, capacity, loft, matcha, staff }`), `decor` (a decoration kind or `null` per spot), `maxCats`, `book` (names of every cat ever adopted), `muted`. Each cat also has `personality` and `affection`; each customer has `matcha`. Only coins, cats, upgrades, decor, book and muted are saved.
+- **A stray is a normal cat object** made with `Cats.create()`. It isn't in `cats[]` while it waits, so it doesn't get hungry, count toward capacity or add to customer payments. Adopting moves the same object into `cats[]`.
 - **Logic files never touch the DOM.** They change `state`; `UI.render(state)` redraws from it every frame. Keep this split when adding features.
+- **Animation that isn't gameplay lives in `scene.js`.** Customers walking to and from the door, a stray walking in or leaving, Juniper walking to the bowl, and all effects are visual only: the game logic seats a customer and starts their 30 s the moment they arrive, and the scene shows them walking over. Walking runs on game time so `?speed=` keeps it in step; ambient effects run on real time.
 - **Time** is in game seconds. The loop caps each frame's `dt` at 0.25 s and resets when the tab is hidden, so nothing catches up after the tab was in the background.
 
 ## What I'd do next (priority order)
 
-1. **Stray cats (criteria 9–14), the last missing P0 feature.** Suggested approach:
-   - Add `stray: null` and `strayCheckTimer: 0` to `createInitialState()` (there's a TODO there).
-   - New file `strays.js` with an `update(state, dt)` that, when `state.stray` is null, counts up to `CONFIG.STRAY_CHECK_SECONDS` and rolls `CONFIG.STRAY_CHANCE`. On success, create the stray with `Cats.create(name, look)` using a random name from `CONFIG.STRAY_NAMES` and a random non-orange look from `CONFIG.CAT_LOOKS`.
-   - `adopt(state)` pushes it into `state.cats` (only if under `CONFIG.MAX_CATS`); `turnAway(state)` clears it. Both reset `strayCheckTimer` to 0.
-   - In `ui.js`, draw the stray at `CONFIG.DOOR_POS` with "Adopt" / "Not now" buttons; disable Adopt and show "The café is full" at 3 cats.
-   - Call `Strays.update` from `update(dt)` in `main.js`, and add `<script src="strays.js">` before `ui.js`.
-2. **Test option for strays (criterion 21)**, e.g. `?stray=1` makes a stray appear right away. Document it in this README.
-3. **Manual pass over all P0 criteria** in the browser using `?speed=10`.
-4. **P1, in this order:** local save → facility upgrades → collection book → sound.
-5. **P2** only if everything above is done.
+Every criterion in `SPEC.md` (P0, P1 and P2) is in, with final pixel art. What's left is checking what a script can't:
+
+1. **Listen to the sound** in a normal browser: music volume, meows, coin, bell, kibble. It was only checked that audio starts, stops and mutes.
+2. **Check the pause with a real tab switch** in a normal browser. It was only tested by faking the page's hidden state.
+3. **Play a full run** from a new game to all 9 cats, to judge pacing. Late in the game coins pile up with nothing left to buy; more decoration kinds, a way to move or sell decorations, or uses for affection would give them somewhere to go.

@@ -17,20 +17,23 @@ const Customers = (() => {
       seat,
       elapsed: 0,
       activity: Math.random() < 0.5 ? "coffee" : "cats",
+      // Once matcha is on the menu, some customers order it (SPEC P2 #29).
+      matcha: !!state.upgrades.matcha && Math.random() < CONFIG.UPGRADES.matcha.chance,
     };
     state.seats[seat] = customer.id;
     state.customers.push(customer);
   }
 
-  // 20 + 5 for each cat with fullness >= 30 at checkout time.
-  function paymentFor(state) {
+  // 20 + 5 for each cat with fullness >= 30 at checkout time, plus 10 for a matcha.
+  function paymentFor(state, customer) {
     const fedCats = state.cats.filter((c) => c.fullness >= CONFIG.HUNGRY_BELOW).length;
-    return CONFIG.CUSTOMER_BASE_PAY + CONFIG.CUSTOMER_BONUS_PER_FED_CAT * fedCats;
+    const matcha = customer && customer.matcha ? CONFIG.UPGRADES.matcha.bonus : 0;
+    return CONFIG.CUSTOMER_BASE_PAY + CONFIG.CUSTOMER_BONUS_PER_FED_CAT * fedCats + matcha;
   }
 
   // Pay once, free the seat, remove the customer.
   function checkout(state, customer) {
-    const amount = paymentFor(state);
+    const amount = paymentFor(state, customer);
     state.coins += amount;
     state.seats[customer.seat] = null;
     state.customers = state.customers.filter((c) => c.id !== customer.id);
@@ -40,8 +43,8 @@ const Customers = (() => {
   // onPaid(customer, amount) lets the UI show a "+25" effect.
   function update(state, dt, onPaid) {
     state.customerSpawnTimer += dt;
-    while (state.customerSpawnTimer >= CONFIG.CUSTOMER_SPAWN_SECONDS) {
-      state.customerSpawnTimer -= CONFIG.CUSTOMER_SPAWN_SECONDS;
+    while (state.customerSpawnTimer >= state.customerSpawnSeconds) {
+      state.customerSpawnTimer -= state.customerSpawnSeconds;
       trySpawn(state);
     }
 

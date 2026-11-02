@@ -4,35 +4,149 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cozy Cat Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main id="app">
-    <header id="hud">
-      <h1>Cozy Cat Café</h1>
-      <div class="stats">
-        <span class="stat">🪙 <span id="coins">0</span></span>
-        <span class="stat">🐱 <span id="cat-count">0/3</span></span>
+    <header id="hud" class="box wood">
+      <div class="brand">
+        <img class="icon" data-icon="catHead" alt="" />
+        <h1>Cozy Cat Café</h1>
       </div>
-      <button id="refill">Refill food (10 🪙)</button>
+      <div class="stats">
+        <span class="stat" id="stat-coins" title="Coins">
+          <img class="icon" data-icon="coin" alt="Coins" /><span id="coins">0</span>
+        </span>
+        <span class="stat" title="Cats in the café">
+          <img class="icon" data-icon="catHead" alt="Cats" /><span id="cat-count">0/3</span>
+        </span>
+      </div>
+      <div class="actions">
+        <div class="tools">
+          <button id="book-btn" class="btn btn-tool" title="Cat book" aria-label="Cat book">
+            <img class="icon" data-icon="book" alt="" />
+          </button>
+          <button id="decor-btn" class="btn btn-tool" title="Decorate" aria-label="Decorate">
+            <img class="icon" data-icon="plant" alt="" />
+          </button>
+          <button id="upgrades-btn" class="btn btn-tool" title="Upgrades" aria-label="Upgrades">
+            <img class="icon" data-icon="shop" alt="" />
+          </button>
+          <button id="mute-btn" class="btn btn-tool" title="Mute sound" aria-label="Mute sound" aria-pressed="false">
+            <img id="mute-icon" class="icon" data-icon="soundOn" alt="" />
+          </button>
+        </div>
+        <button id="refill" class="btn btn-honey">
+          <img class="icon" data-icon="bowlFull" alt="" />
+          <span>Refill food</span>
+          <span class="price"><img class="icon" data-icon="coin" alt="" />10</span>
+        </button>
+      </div>
     </header>
 
-    <div id="shop">
-      <div id="door" class="prop">🚪<span class="prop-label">Door</span></div>
-      <div id="bowl" class="prop">🥣<span class="prop-label">Food</span></div>
-      <!-- seats, cats, customers and effects are added by ui.js -->
+    <div id="stage">
+      <canvas id="shop" aria-label="The café: cats wander, customers sit at the tables, and strays arrive at the door"></canvas>
+      <div id="message" role="status" aria-live="polite"></div>
+      <div id="place-bar" class="box paper place-bar" hidden>
+        <span id="place-text"></span>
+        <button id="place-cancel" class="btn btn-sage">Cancel</button>
+      </div>
     </div>
 
-    <div id="info">
-      <span id="info-text"></span>
-      <button id="info-close" aria-label="Close">✕</button>
-    </div>
-    <div id="message"></div>
+    <section id="tray">
+      <div class="slot">
+        <div id="stray-panel" class="box paper card">
+          <canvas id="stray-portrait" class="portrait" width="20" height="17"></canvas>
+          <div class="card-body">
+            <p id="stray-text" class="card-title"></p>
+            <p id="stray-meta" class="card-meta"></p>
+            <div class="card-actions">
+              <button id="adopt" class="btn btn-honey">Adopt</button>
+              <button id="turn-away" class="btn btn-sage">Not now</button>
+              <span id="stray-full" class="tag">The café is full</span>
+            </div>
+          </div>
+        </div>
+        <p id="stray-empty" class="empty">No one at the door. Strays wander by now and then.</p>
+      </div>
+
+      <div class="slot">
+        <div id="info" class="box paper card">
+          <canvas id="info-portrait" class="portrait" width="20" height="17"></canvas>
+          <div class="card-body">
+            <p class="card-title"><span id="info-name"></span> <span id="info-hungry" class="tag" hidden>Hungry</span></p>
+            <p id="info-meta" class="card-meta"></p>
+            <div class="fullness">
+              <span class="fullness-label">Fullness</span>
+              <span id="info-bar" class="bar"><span id="info-fill" class="bar-fill"></span></span>
+              <span id="info-value" class="fullness-value"></span>
+            </div>
+            <div class="fullness affection">
+              <span class="fullness-label">Affection</span>
+              <span id="info-hearts" class="hearts"></span>
+              <span id="info-affection" class="fullness-value"></span>
+            </div>
+          </div>
+          <button id="info-close" class="btn btn-icon" aria-label="Close"><img class="icon icon-sm" data-icon="close" alt="" /></button>
+        </div>
+        <p id="info-empty" class="empty">Click a cat to check on them.</p>
+      </div>
+    </section>
   </main>
+
+  <dialog id="upgrades-dialog" class="dialog paper" aria-labelledby="upgrades-title">
+    <div class="dialog-head">
+      <h2 id="upgrades-title">Upgrades</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p class="dialog-sub">Spend coins to grow the café. Each upgrade is bought once.</p>
+    <ul id="upgrade-list" class="upgrade-list"></ul>
+  </dialog>
+
+  <dialog id="decor-dialog" class="dialog paper" aria-labelledby="decor-title">
+    <div class="dialog-head">
+      <h2 id="decor-title">Decorate</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p id="decor-sub" class="dialog-sub"></p>
+    <ul id="decor-list" class="decor-list"></ul>
+  </dialog>
+
+  <dialog id="book-dialog" class="dialog paper" aria-labelledby="book-title">
+    <div class="dialog-head">
+      <h2 id="book-title">Cat book</h2>
+      <button class="btn btn-icon" data-close aria-label="Close"><img class="icon" data-icon="close" alt="" /></button>
+    </div>
+    <p id="book-count" class="dialog-sub"></p>
+    <ul id="book-grid" class="book-grid"></ul>
+  </dialog>
+
+  <dialog id="away-dialog" class="dialog paper" aria-labelledby="away-title">
+    <h2 id="away-title">Welcome back</h2>
+    <div id="away-cats" class="away-cats"></div>
+    <p id="away-text" class="away-text"></p>
+    <p class="away-amount"><img class="icon" data-icon="coin" alt="" /><span id="away-coins"></span></p>
+    <p id="away-note" class="dialog-sub away-note"></p>
+    <form method="dialog" class="away-actions">
+      <button class="btn btn-honey">Collect coins</button>
+    </form>
+  </dialog>
 
   <script src="config.js"></script>
   <script src="cats.js"></script>
   <script src="customers.js"></script>
+  <script src="strays.js"></script>
+  <script src="upgrades.js"></script>
+  <script src="decor.js"></script>
+  <script src="staff.js"></script>
+  <script src="save.js"></script>
+  <script src="offline.js"></script>
+  <script src="sprites.js"></script>
+  <script src="sound.js"></script>
+  <script src="scene.js"></script>
   <script src="ui.js"></script>
   <script src="main.js"></script>
 </body>

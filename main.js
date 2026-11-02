@@ -1,31 +1,99 @@
-// main.js — creates the game state and runs the main loop.
-// Load order (see index.html): config.js, cats.js, customers.js, ui.js, main.js
+// main.js — creates the game state (or loads the saved one) and runs the main loop.
+// Load order (see index.html): config.js, cats.js, customers.js, strays.js,
+// upgrades.js, decor.js, staff.js, save.js, offline.js, sprites.js, sound.js,
+// scene.js, ui.js, main.js
 
-function createInitialState() {
-  return {
+function createInitialState(saved) {
+  const state = {
     coins: CONFIG.START_COINS,
-    cats: [Cats.create("Cream", "orange")], // guaranteed starting cat
+    cats: [],
     customers: [],
-    seats: CONFIG.SEAT_POSITIONS.map(() => null), // customer id or null
+    seats: [],            // customer id or null, one per table
     customerSpawnTimer: 0,
-    // TODO (SPEC 2.3): stray cats. Suggested fields:
-    // stray: null,          // the cat waiting at the door, or null
-    // strayCheckTimer: 0,   // counts up to CONFIG.STRAY_CHECK_SECONDS
+    customerSpawnSeconds: CONFIG.CUSTOMER_SPAWN_SECONDS,
+    stray: null,          // the cat waiting at the door, or null
+    strayCheckTimer: 0,   // counts up to CONFIG.STRAY_CHECK_SECONDS
+    upgrades: { seats: false, capacity: false, loft: false, matcha: false, staff: false },
+    decor: CONFIG.DECOR_SLOTS.map(() => null), // decoration kind per spot, or null
+    maxCats: CONFIG.MAX_CATS,
+    book: [],             // names of every cat ever adopted (collection book)
+    muted: false,
   };
+  if (saved) {
+    // Returning player: no starting coins or second Cream.
+    state.coins = saved.coins;
+    state.cats = saved.cats.map(Cats.restore);
+    state.upgrades = saved.upgrades;
+    state.decor = saved.decor;
+    state.book = saved.book;
+    state.muted = saved.muted;
+  } else {
+    const first = CONFIG.CAT_ROSTER[0];
+    state.cats = [Cats.create(first.name, first.look)]; // guaranteed starting cat
+  }
+  for (const cat of state.cats) if (!state.book.includes(cat.name)) state.book.push(cat.name);
+  Upgrades.apply(state);
+  return state;
 }
 
-const state = createInitialState();
+if (CONFIG.RESET_SAVE) Save.clear(); // ?reset=1: start over
+const saved = Save.load();
+if (saved && CONFIG.AWAY_TEST) saved.savedAt = Date.now() - CONFIG.AWAY_TEST * 60000; // ?away=N
+const state = createInitialState(saved);
+// Coins for the time the game was closed. Saving right away moves the save
+// time to now, so a reload doesn't pay the same time again.
+const away = saved ? Offline.collect(state, saved.savedAt, Date.now()) : null;
+if (away && away.coins) Save.write(state);
+if (CONFIG.STRAY_TEST) Strays.spawn(state); // ?stray=1: first stray right away
 
 UI.init({
   onRefill() {
-    if (!Cats.refillAll(state)) UI.showMessage("Not enough coins");
+    if (Cats.refillAll(state)) UI.showRefill(state);
+    else UI.showMessage("Not enough coins");
   },
-});
+  onAdopt() {
+    if (!Strays.adopt(state)) UI.showMessage("The café is full");
+    Save.write(state);
+  },
+  onTurnAway() {
+    Strays.turnAway(state);
+  },
+  onBuy(id) {
+    const result = Upgrades.buy(state, id);
+    if (result === "bought") UI.showUpgrade(id);
+    else if (result === "poor") UI.showMessage("Not enough coins");
+    else if (result === "locked") UI.showMessage(`Buy ${Upgrades.name(Upgrades.needs(state, id))} first`);
+    Save.write(state);
+  },
+  onPlace(kind, slot) {
+    const result = Decor.place(state, kind, slot);
+    if (result === "placed") UI.showPlaced(kind, slot);
+    else if (result === "poor") UI.showMessage("Not enough coins");
+    else UI.showMessage("That spot is taken");
+    Save.write(state);
+    return result;
+  },
+  onPet(cat) {
+    Cats.pet(cat);
+  },
+  onToggleSound() {
+    state.muted = !state.muted;
+    Sound.setMuted(state.muted);
+    Save.write(state);
+  },
+}, state);
+if (away && away.coins) UI.showAway(state, away);
+
+// Save every few seconds, and whenever the page is hidden or closed.
+setInterval(() => Save.write(state), CONFIG.SAVE_EVERY_SECONDS * 1000);
+window.addEventListener("pagehide", () => Save.write(state));
 
 // One simulation step. dt is in game seconds.
 function update(dt) {
   for (const cat of state.cats) Cats.update(cat, dt);
   Customers.update(state, dt, UI.showPayment);
+  Staff.update(state, UI.showStaffRefill);
+  Strays.update(state, dt);
 }
 
 // Main loop. The simulation pauses while the tab is hidden and does NOT
@@ -49,6 +117,7 @@ function frame(now) {
 
 document.addEventListener("visibilitychange", () => {
   lastTime = null;
+  if (document.hidden) Save.write(state);
 });
 
 requestAnimationFrame(frame);

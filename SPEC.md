@@ -48,11 +48,11 @@ A new game starts with:
 
 ### 2.4 Customers and income
 
-- The game tries to spawn a customer every 20 seconds.
+- The game tries to spawn a customer every 20 seconds (every 10 seconds once the third table is bought; see P1 #23).
 - If a seat is free, the customer enters and takes a seat; if all seats are taken, no customer spawns that time.
 - A customer stays for 30 seconds, shown drinking coffee or playing with cats, then pays automatically and leaves.
 - Each customer's base payment is 20 coins.
-- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher.
+- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher (plus 10 for a matcha latte once it's unlocked; see P2 #29).
 - Coins are added immediately at checkout, and the seat becomes free again.
 - Hungry cats do not stop customers from coming or paying the base amount, so the player can always earn back the coins needed for food.
 
@@ -116,7 +116,7 @@ P0 is the core version; P1 and P2 are later extensions.
 ### P1: Add after the core is done
 
 22. After refreshing the page, coins, adopted cats, and their fullness are restored to the most recent save; the starting coins and "Cream" are not given again. Current customers and a waiting stray do not need to be saved.
-23. Paying 100 coins upgrades seats from 2 to 3; paying 150 coins raises the cat limit from 3 to 5. Each upgrade can be bought only once and cannot be bought without enough coins.
+23. Paying 100 coins upgrades seats from 2 to 3; paying 150 coins raises the cat limit from 3 to 5. Each upgrade can be bought only once and cannot be bought without enough coins. Buying the third table also makes customers try to arrive every 10 seconds instead of 20, so all three seats can fill (with 30-second stays, arrivals every 20 seconds never put more than two customers inside).
 24. The collection book shows cats that have been adopted, with descriptions; cats not yet adopted are shown as locked.
 25. The mute button turns off all background music and sound effects; clicking it again turns them back on.
 
