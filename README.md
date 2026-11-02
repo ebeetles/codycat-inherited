@@ -1,6 +1,8 @@
 # Cozy Cat Café
 
-A cozy, low-pressure cat café game for the browser. Cats wander around the shop, customers drop in and pay, strays turn up at the door, and you keep the cats fed, grow the café and decorate it. Progress is saved in the browser. The full design is in [`SPEC.md`](SPEC.md); this README covers how to run the game, what works so far, and where things live in the code.
+**Designed and built by [Original author's name].** They wrote the game design (`SPEC.md`) and built the foundation this version grows from: the game loop, cat behavior and hunger, customers and payments, the config-driven structure, and the split between game logic and drawing. I took it over from there; see "Changes to the original design" below for what I changed and why.
+
+A cozy, low-pressure cat café game for the browser. Cats wander around the shop, customers drop in and pay, strays turn up at the door, and you keep the cats fed, grow the café and decorate it. Progress is saved in the browser. The full design is in [`SPEC.md`](SPEC.md) (kept as received, with my proposed rule changes in a marked section at the bottom); this README covers how to run the game, what works so far, and where things live in the code.
 
 ## How to run
 
@@ -136,13 +138,35 @@ Numbers match `SPEC.md` section 4. "Done" means implemented and checked in the b
 | 20 | Pauses in background, no catch-up | ✅ Done |
 | 21 | README explains how to test random events (e.g. force a stray) | ✅ Done: see "Test mode: force strays" above |
 | 22 | Refresh restores coins, cats, fullness; no second Cream or starting coins | ✅ Done (also restores upgrades, cat book and sound setting; damaged saves start a new game) |
-| 23 | Seats 2 → 3 for 100, cats 3 → 5 for 150, once each, not without coins | ✅ Done. The Third table also halves the arrival interval to 10 s (a spec change, now in `SPEC.md`), since with 20 s arrivals and 30 s stays the third seat never filled. Simulated: 28 → 57 customers per 10 minutes, all three seats full 95% of the time |
+| 23 | Seats 2 → 3 for 100, cats 3 → 5 for 150, once each, not without coins | ✅ Done. The Third table also halves the arrival interval to 10 s (a proposed rule change, explained at the bottom of `SPEC.md`), since with 20 s arrivals and 30 s stays the third seat never filled. Simulated: 28 → 57 customers per 10 minutes, all three seats full 95% of the time |
 | 24 | Cat book: adopted cats with descriptions, others locked | ✅ Done (9 cats) |
 | 25 | Mute button turns all music and effects off and back on | ✅ Done (audio start/stop checked in the browser; how it sounds still needs a listen) |
 | 26 | Decorations: 3+ kinds, placed in free slots, charged once | ✅ Done (4 kinds, 5 spots. Checked: placing charged once; a taken spot and too few coins were refused without charging; Cancel and Esc charge nothing; with every spot full, Place is disabled with "No free spots") |
 | 27 | 2+ personalities affect rest or movement; clicking raises affection | ✅ Done (3 personalities; simulated nap share 80% sleepy vs 45% default, playful and curious walk more. Each click +2 affection, shown as hearts, capped at 100, saved) |
 | 28 | 10 coins per full offline minute, max 120, paid once, no fullness loss offline | ✅ Done (checked in the browser: 47.5 min away paid 470; a reload paid nothing more; `?away=600` paid the 1,200 cap; fullness unchanged by the time away) |
 | 29 | New drink, auto-refill staff, shop expansion, prices and effects shown | ✅ Done (Matcha latte: 48% of 2,000 customers ordered it, paying 35 instead of 25 with one fed cat. Juniper refilled as soon as a cat dropped below 30, for 10 coins. Cat loft raised capacity to 9 and was refused until Cozier café was owned. Every row shows price, effect and why Buy is disabled) |
+
+## Changes to the original design
+
+Most of the original code is still here and still works the way it was designed. New features were added as new files, each one global object like the original `Cats`, `Customers` and `UI`, with game logic kept away from the page. The one substantial restructure is how the game is drawn.
+
+### `ui.js`: drawing moved from page elements to a canvas
+**Before:** `ui.js` drew the café out of page elements. Every cat, customer and seat was a `div` positioned inside `#shop` and redrawn each frame: an emoji (🐱, 🧑, 🪑, ☕, 💤…) on a circle colored from `CONFIG.CAT_LOOKS[look].color`, with matching rules in `style.css`.
+
+**After:** the café is drawn on a `<canvas>`. Two new files took over that job:
+- `scene.js` draws the room, cats, customers, the stray and effects each frame.
+- `sprites.js` holds the pixel art.
+
+`ui.js` now runs everything around the canvas: header, buttons, panels, dialogs, messages and mouse input. It still keeps the original's shape: an `init(handlers)` function, `render(state)` called every frame, `showMessage` and `showPayment`, and it only reads `state`, never changes it. Most of its old drawing code and the related CSS were removed, which is why `ui.js` and `style.css` are the least intact files.
+
+**Why:** the original README said the emoji were temporary placeholders and that all of them had to be replaced with drawn art in one consistent style, pixel art recommended. I wanted animated pixel art for everything: walk cycles, blinking, a live room with weather in the window, lamp glow and steam. A canvas drawn at a whole-number scale keeps pixels crisp, makes it simple to draw things back to front so cats pass behind tables, and avoids creating and moving dozens of elements every frame. Putting sprite images inside the existing divs would also have worked; the canvas was a choice, not the only option.
+
+### Smaller changes
+- **Cat names and colors:** `CONFIG.STRAY_NAMES` and each look's `color` were replaced by `CONFIG.CAT_ROSTER` (name, look, personality, description) and fur palettes in `sprites.js`. The collection book needs a fixed list of cats, and colors now belong to the art.
+- **Layout positions:** `DOOR_POS`, `BOWL_POS` and `SEAT_POSITIONS` moved to fit the new room; they're still in `config.js` in the same 640×400 coordinates.
+- **Strays** follow the original author's own plan from their "What I'd do next" list: the two state fields, a separate `strays.js`, the timer reset, and a `?stray=1` test option.
+- **Small widenings of their logic:** the cats' 50/30/20 walk/idle/sleep odds moved into `CONFIG.CAT_MODE_ODDS` so personalities can adjust them; `paymentFor(state)` became `paymentFor(state, customer)` for matcha; the customer spawn interval is now read from `state` so an upgrade can change it. The defaults behave exactly as before.
+- **Rule changes:** proposed, with reasons, at the bottom of `SPEC.md` (third table, matcha, cat loft). The original spec text is unchanged.
 
 ## Code map
 
