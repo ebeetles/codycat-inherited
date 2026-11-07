@@ -48,11 +48,11 @@ A new game starts with:
 
 ### 2.4 Customers and income
 
-- The game tries to spawn a customer every 20 seconds (every 10 seconds once the third table is bought; see P1 #23).
+- The game tries to spawn a customer every 20 seconds.
 - If a seat is free, the customer enters and takes a seat; if all seats are taken, no customer spawns that time.
 - A customer stays for 30 seconds, shown drinking coffee or playing with cats, then pays automatically and leaves.
 - Each customer's base payment is 20 coins.
-- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher (plus 10 for a matcha latte once it's unlocked; see P2 #29).
+- At checkout, the customer pays 5 extra coins for each cat whose fullness is 30 or higher.
 - Coins are added immediately at checkout, and the seat becomes free again.
 - Hungry cats do not stop customers from coming or paying the base amount, so the player can always earn back the coins needed for food.
 
@@ -116,7 +116,7 @@ P0 is the core version; P1 and P2 are later extensions.
 ### P1: Add after the core is done
 
 22. After refreshing the page, coins, adopted cats, and their fullness are restored to the most recent save; the starting coins and "Cream" are not given again. Current customers and a waiting stray do not need to be saved.
-23. Paying 100 coins upgrades seats from 2 to 3; paying 150 coins raises the cat limit from 3 to 5. Each upgrade can be bought only once and cannot be bought without enough coins. Buying the third table also makes customers try to arrive every 10 seconds instead of 20, so all three seats can fill (with 30-second stays, arrivals every 20 seconds never put more than two customers inside).
+23. Paying 100 coins upgrades seats from 2 to 3; paying 150 coins raises the cat limit from 3 to 5. Each upgrade can be bought only once and cannot be bought without enough coins.
 24. The collection book shows cats that have been adopted, with descriptions; cats not yet adopted are shown as locked.
 25. The mute button turns off all background music and sound effects; clicking it again turns them back on.
 
@@ -146,3 +146,13 @@ P0 is the core version; P1 and P2 are later extensions.
 ### Minimum deliverable
 
 Complete all of P0. The player can watch cats act on their own, care for them, take in new cats, and earn income from customers.
+
+---
+
+## Proposed additions (added by the next developer; everything above is the original spec, unchanged)
+
+These are rule changes the current build makes. Each is a proposal for the spec's owner to accept or reject; the reasons are below.
+
+1. **The third table also speeds up customer arrivals (affects #15 and #23).** Buying the third table makes the game try to spawn a customer every 10 seconds instead of 20. With 20-second arrivals and 30-second stays, there are never more than two customers inside, so the third seat bought in #23 would never be used (confirmed in a simulation). With 10-second arrivals, all three seats fill. Before the upgrade, #15 holds exactly as written.
+2. **A matcha latte adds to the payment (affects #16, comes from #29).** #29 asks for a new drink but doesn't say what it does. In this build, once matcha is unlocked, about half of customers order one and pay 10 coins extra, so the payment becomes `20 + 5 × (fed cats) + 10 if they ordered matcha`. Without the matcha upgrade, #16 holds exactly as written.
+3. **The shop expansion raises the cat limit to 9 (from #29).** #29 asks for "one shop expansion" without saying what it does. Here it's a cat loft that raises the limit from 5 to 9 and needs the #23 capacity upgrade first. With the limit at 5, only 5 of the 9 cats in the collection book (#24) could ever be adopted, so the book could never be finished.
